@@ -11,10 +11,10 @@ REQUESTS_LIMIT_PER_MINUTE = 60
 REQUESTS_LIMIT_PER_SECOND = REQUESTS_LIMIT_PER_MINUTE // 60
 
 with open("tokens/bitstamp", 'r') as bitstamp_token:
-    BINANCE_API_TOKEN = bitstamp_token.read()
+    BINANCE_API_TOKEN = bitstamp_token.read().strip()
 
 with open("tokens/bitstamp_secret", 'r') as bitstamp_secret:
-    BINANCE_API_SECRET = bitstamp_secret.read()
+    BINANCE_API_SECRET = bitstamp_secret.read().strip()
 
 SUBSCRIPTION_UPDATE_SECONDS = 10
 SUBSCRIBERS = dict() # users to (symbol, balance, open, open amount, stop profit price, stop loss price)

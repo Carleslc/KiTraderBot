@@ -7,7 +7,7 @@ from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 with open("tokens/telegram", 'r') as telegram_token:
-    TELEGRAM_API_TOKEN = telegram_token.read()
+    TELEGRAM_API_TOKEN = telegram_token.read().strip()
 
 with open("users", 'r') as users:
     ALLOWED_USERS = set(users.read().split('\n'))
