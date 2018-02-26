@@ -5,6 +5,7 @@ import logging
 import bitstamp as trading
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.error import Unauthorized, TimedOut
 
 with open("tokens/telegram", 'r') as telegram_token:
     TELEGRAM_API_TOKEN = telegram_token.read().strip()
@@ -36,13 +37,17 @@ def reply(update, text):
 # BASIC AND DEFAULT HANDLERS
 
 def start(bot, update):
-    text = f"Hi, {update.message.from_user.first_name}! I'm KiTrader, your trading assistant!\n\nAvailable commands:\n"
-    text += "/start - Shows this message"
+    text = f"Hi, {update.message.from_user.first_name}! I'm KiTrader, your trading assistant!\n\nAvailable commands:"
+    text += "\n/start - Shows this message"
+    text += "\n/ping - Test connection with trading API"
+    text += "\n/price symbol - Current price for provided symbol"
     if is_allowed(update):
-        text += "\n/ping - Test connection with trading API\n"
-        text += "/price symbol - Current price for provided symbol\n"
-        text += f"/subscribe symbol - Subscribe for automatic trading of provided symbol\n"
-        text += f"/unsubscribe - Unsubscribe from automatic trading"
+        text += "\n/newAccount {balance} {currency} - Creates an account for trading"
+        text += "\n/deleteAccount - Deletes your trading account"
+        text += "\n/account {user} - View user account"
+        text += "\n/historic {user} - View user trades"
+        text += "\n/trade {BUY, SELL} amount symbol [comment] - Order a trade for your account"
+        text += "\n/tradeAll {BUY, SELL} symbol [comment] - Order a trade for your account with maximum available amount"
     reply(update, text)
 
 def unknown(bot, update):
@@ -51,10 +56,10 @@ def unknown(bot, update):
 def send(f, args=False):
     if args:
         def response(bot, update, args):
-            reply(update, f(' '.join(args)))
+            reply(update, f(update.message.from_user.username, ' '.join(args)))
     else:
         def response(bot, update):
-            reply(update, f())
+            reply(update, f(update.message.from_user.username))
     return response
 
 # SUBSCRIPTIONS
@@ -68,43 +73,61 @@ def subscription_update(bot, job):
         bot.send_message(chat_id=user, text=text)
 
 def subscribe(bot, update, args, job_queue):
-    user = update.message.chat_id
-    (seconds, message) = trading.subscribe(user, ''.join(args))
+    user = update.message.from_user.username
+    (seconds, message) = trading.subscribe(user, ' '.join(args))
     if seconds > 0:
         __unsubscribe(user)
-        job = job_queue.run_repeating(subscription_update, interval=seconds, first=0, context=user)
+        job = job_queue.run_repeating(subscription_update, interval=seconds, first=0, context=update.message.chat_id)
         SUBSCRIPTIONS[user] = job
     reply(update, message)
 
-def __unsubscribe(user):
+def __unsubscribe(update):
+    user = update.message.from_user.username
     if user in SUBSCRIPTIONS:
         SUBSCRIPTIONS[user].schedule_removal()
+    return trading.unsubscribe(user)
 
 def unsubscribe(bot, update):
-    user = update.message.chat_id
-    __unsubscribe(user)
-    reply(update, trading.unsubscribe(user))
+    reply(update, __unsubscribe(update))
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-# TODO (Error Handling): https://github.com/python-telegram-bot/python-telegram-bot/wiki/Exception-Handling
+
+def error_callback(bot, update, error):
+    try:
+        raise error
+    except Unauthorized:
+        __unsubscribe(update)
+    except TimedOut:
+        pass
 
 bot = Bot(TELEGRAM_API_TOKEN)
 updater = Updater(TELEGRAM_API_TOKEN)
 dispatcher = updater.dispatcher
 
+dispatcher.add_error_handler(error_callback)
+
 # TRADING HANDLERS
-dispatcher.add_handler(CommandHandler('ping', restricted(send(trading.ping))))
-dispatcher.add_handler(CommandHandler('price', restricted(send(trading.price, args=True)), pass_args=True))
-dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_args=True, pass_job_queue=True))
-dispatcher.add_handler(CommandHandler('unsubscribe', restricted(unsubscribe)))
+dispatcher.add_handler(CommandHandler('ping', send(trading.ping)))
+dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True), pass_args=True))
+dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('newAccount', restricted(subscribe), pass_args=True, pass_job_queue=True))
+dispatcher.add_handler(CommandHandler('deleteAccount', restricted(unsubscribe)))
+dispatcher.add_handler(CommandHandler('account', restricted(send(trading.account, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('historic', restricted(send(trading.historic, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('tradeAll', restricted(send(trading.tradeAll, args=True)), pass_args=True))
 
 # DEFAULT HANDLERS
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 dispatcher.add_handler(MessageHandler(Filters.text, start))
 
+trading.load()
+
 updater.start_polling()
 
 print(f"{bot.get_me().username} Started!\n")
 
 updater.idle()
+
+trading.save()
