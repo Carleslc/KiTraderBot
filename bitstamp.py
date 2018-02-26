@@ -92,7 +92,7 @@ def trade(user, order):
     if not success:
         return "Amount must be in decimal format. For example: 500.25"
     symbol = args[2] + account.currency if account.currency not in args[2] else args[2]
-    comment = args[3] if len(args) > 3 else ''
+    comment = ' '.join(args[3:]) if len(args) > 3 else ''
     if not __exists(symbol):
         return f"Invalid symbol: {symbol.upper()}"
     current = get_price(symbol)
@@ -110,7 +110,7 @@ def tradeAll(user, order):
     if len(args) < 2 or action not in ORDERS:
         return "Invalid order syntax."
     symbol = args[1] + account.currency if account.currency not in args[1] else args[1]
-    comment = args[2] if len(args) > 2 else ''
+    comment = ' '.join(args[2:]) if len(args) > 2 else ''
     if not __exists(symbol):
         return f"Invalid symbol: {symbol.upper()}"
     current = get_price(symbol)
