@@ -11,7 +11,7 @@ class Position:
         self.symbol = symbol
         self.amount = amount
 
-    def __str__(self):
+    def __repr__(self):
         return f"{self.symbol}: {round(self.amount, DECIMALS)}"
 
 class Account:
@@ -31,16 +31,12 @@ class Account:
         return f"User: {self.user}\nBalance: {self.__price(self.balance)}\nEquity: {self.__price(self.equity())}\nReturn: {round(ret, 3)}%{positions}"
 
     def load(file):
-        account = Account(0, 0, '', 0)
         with open(file, 'r') as account_file:
-            loadedAccount = json.load(account_file)
-            account.__dict__ = loadedAccount['account']
-            account.positions.__dict__ = loadedAccount['positions']
-        return account
+            return json.load(account_file, cls=Decoder)
 
     def save(self, file):
         with open(file, 'w') as account_file:
-            json.dump({ 'account': self.__dict__, 'positions': self.positions.__dict__ }, account_file)
+            json.dump(self, account_file, default=dumper)
 
     def percent(d):
         return (d - 1) * 100
@@ -120,3 +116,21 @@ class Account:
         if amount == 0:
             return f"There is no position open for {self.__symbol(symbol)}."
         return self.sell(symbol, current, amount, fee, comment)
+
+def dumper(obj):
+    try:
+        return obj.toJSON()
+    except:
+        return obj.__dict__
+
+class Decoder(json.JSONDecoder):
+    def decode(self, s):
+        d = super(Decoder, self).decode(s)
+        account = Account(d['user'], d['balance'], d['currency'], d['min_trade'])
+        account.initial_balance = d['initial_balance']
+        account.historic = d['historic']
+        positions = dict()
+        for symbol, pos in d['positions'].items():
+            positions[symbol] = Position(symbol, pos['amount'])
+        account.positions = positions
+        return account

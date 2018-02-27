@@ -1,5 +1,6 @@
 import os
 import email
+from pytz import UTC
 from imaplib import IMAP4_SSL
 from datetime import datetime, timedelta
 from Crypto.Cipher import AES
@@ -37,13 +38,17 @@ def __read_alert(id):
     date = datetime.strptime(msg['date'], DATE_TIME_FORMAT)
     return subject, date
 
-def last_alert():
+def last_alert(minTime=datetime.now() - timedelta(days=1)):
     if os.path.isfile('lastAlert'):
         with open('lastAlert', 'r') as lastAlertFile:
             lastAlertDate = datetime.strptime(lastAlertFile.read().split(' -> ', 1)[0], DATE_TIME_FORMAT)
     else:
         lastAlertDate = datetime.now() - timedelta(days=1)
 
+    lastAlertDate = UTC.localize(lastAlertDate)
+    minTime = UTC.localize(minTime)
+
+    lastAlertDate = max(lastAlertDate, minTime)
     print(f"Fetching alerts since {lastAlertDate}")
 
     since = lastAlertDate.strftime(DATE_FORMAT)
@@ -54,7 +59,7 @@ def last_alert():
 
     if alerts > 0:
         subject, newLastAlertDate = __read_alert(mail_ids[0])
-        if newLastAlertDate != lastAlertDate:
+        if newLastAlertDate != lastAlertDate and newLastAlertDate > minTime:
             alert = f'{newLastAlertDate.strftime(DATE_TIME_FORMAT)} -> {subject}'
             print('New alert: ' + alert)
 

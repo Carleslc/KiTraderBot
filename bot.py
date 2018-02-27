@@ -79,8 +79,9 @@ def account(f):
 SUBSCRIPTIONS = dict() # users to job
 
 UPDATE_ALERTS_SECONDS = 1800
+MAX_HOURS_ALERT = 8
 
-lastUpdate = datetime.now() - timedelta(days=1)
+lastUpdate = datetime.now() - timedelta(hours=MAX_HOURS_ALERT)
 newAlert = False
 lastAlert = None
 
@@ -90,7 +91,7 @@ def update_alerts():
     if lastUpdate < now - timedelta(minutes=20):
         lastUpdate = now
         alerts.login()
-        lastAlert = alerts.last_alert()
+        lastAlert = alerts.last_alert(datetime.now() - timedelta(hours=MAX_HOURS_ALERT))
         alerts.logout()
         newAlert = lastAlert is not None
 
@@ -101,6 +102,8 @@ def subscription_update(bot, job):
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
         result = trading.tradeAll(NAME, lastAlert)
+        if 'BUY' not in result and 'SELL' not in result:
+            result = lastAlert + '\n' + result
         text = f"🚨 New Alert!\n\n{result}\n\nPerform /account {NAME} for more information."
         print(text)
         bot.send_message(chat_id=chat_id, text=text)
@@ -131,6 +134,7 @@ def __unsubscribe(update):
     user = update.message.from_user.username
     if user in SUBSCRIPTIONS:
         SUBSCRIPTIONS[user].schedule_removal()
+        SUBSCRIPTIONS.pop(user)
         return "Unsubscribed successfully."
     else:
         return "You are not subscribed."
