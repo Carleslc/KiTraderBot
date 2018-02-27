@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import json
 import gmail as alerts
 import bitstamp as trading
+from os import path
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.error import Unauthorized, TimedOut
@@ -46,7 +48,7 @@ def start(bot, update):
     text += "\n/price symbol - Current price for provided symbol"
     text += f"\n/account [{NAME}, {user.username}] - View your account or the bot account"
     if is_allowed(update):
-        text += "\n/newAccount {balance} {currency} - Creates an account for trading"
+        text += "\n/newAccount [balance] [currency] - Creates an account for trading"
         text += "\n/deleteAccount - Deletes your trading account"
         text += f"\n/history [{NAME}, {user.username}] - View your trades or the bot trades"
         text += "\n/trade [BUY, SELL] amount symbol [comment] - Order a trade for your account"
@@ -83,7 +85,7 @@ newAlert = False
 lastAlert = None
 
 def update_alerts():
-    global lastAlert, newAlerts
+    global lastAlert, newAlerts, lastUpdate
     now = datetime.now()
     if lastUpdate < now - timedelta(minutes=20):
         lastUpdate = now
@@ -94,13 +96,26 @@ def update_alerts():
 
 def subscription_update(bot, job):
     update_alerts()
-    user = job.context
+    chat_id = job.context
     if newAlert:
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
         result = trading.tradeAll(NAME, lastAlert)
-        bot.send_message(chat_id=user, text=f"🚨 {NAME} New Alert!\n\n{result}\n\nPerform /account {NAME} for more information")
+        bot.send_message(chat_id=chat_id, text=f"🚨 {NAME} New Alert!\n\n{result}\n\nPerform /account {NAME} for more information")
     lastUpdate = datetime.now()
+
+def loadSubscriptions():
+    global bot
+    if path.isfile('subscriptions'):
+        with open('subscriptions', 'r') as subscriptionsFile:
+            subscriptionUsers = json.load(subscriptionsFile)
+            for subscriptor in subscriptionUsers:
+                job = bot.job_queue.run_repeating(subscription_update, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriptor.chat_id)
+                SUBSCRIPTIONS[subscriptor.user] = job
+
+def saveSubscriptions():
+    with open('subscriptions', 'w') as subscriptionsFile:
+        json.dump([{ 'user': user, 'chat_id': job.context } for user, job in SUBSCRIPTIONS.items()], subscriptionsFile)
 
 def subscribe(bot, update, args, job_queue):
     user = update.message.from_user.username
@@ -160,6 +175,7 @@ dispatcher.add_handler(MessageHandler(Filters.text, start))
 
 # START
 trading.load()
+loadSubscriptions()
 
 updater.start_polling()
 
@@ -170,4 +186,5 @@ updater.idle()
 # STOP
 print("Saving accounts...")
 trading.save()
+saveSubscriptions()
 print("Done! Goodbye!")
