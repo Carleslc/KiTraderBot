@@ -20,7 +20,7 @@ with open("users", 'r') as users:
 NOT_ALLOWED = "You're not allowed to use this command."
 
 def debug(update, answer):
-    print(f"{update.message.from_user.username} ({update.message.chat_id}): {update.message.text}\n{answer}\n")
+    print(f"{datetime.now()} - {update.message.from_user.username} ({update.message.chat_id}): {update.message.text}\n{answer}\n")
 
 def is_allowed(update):
     return update.message.from_user.username in ALLOWED_USERS
@@ -97,9 +97,7 @@ def update_alerts():
 def subscription_update(bot, job):
     update_alerts()
     chat_id = job.context
-    print('New Alert? (subscription)', newAlert)
     if newAlert:
-        print("NEW ALERT. USER " + chat_id)
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
         result = trading.tradeAll(NAME, lastAlert)
