@@ -85,7 +85,7 @@ newAlert = False
 lastAlert = None
 
 def update_alerts():
-    global lastAlert, newAlerts, lastUpdate
+    global lastAlert, newAlert, lastUpdate
     now = datetime.now()
     if lastUpdate < now - timedelta(minutes=20):
         lastUpdate = now
@@ -97,6 +97,7 @@ def update_alerts():
 def subscription_update(bot, job):
     update_alerts()
     chat_id = job.context
+    print('New Alert? (subscription)', newAlert)
     if newAlert:
         print("NEW ALERT. USER " + chat_id)
         if not trading.existsAccount(NAME):
