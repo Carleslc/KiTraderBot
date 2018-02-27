@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 from account import *
 from json import loads as json
@@ -19,7 +21,7 @@ with open("tokens/bitstamp", 'r') as bitstamp_token:
 with open("tokens/bitstamp_secret", 'r') as bitstamp_secret:
     BINANCE_API_SECRET = bitstamp_secret.read().strip()
 
-SUBSCRIBERS = dict() # user to Account
+ACCOUNTS = dict() # user to Account
 
 def __get(url, callback):
     response = get(BASE_URL + url)
@@ -46,13 +48,20 @@ def price(user, symbol):
 def __exists(symbol):
     return get(BASE_URL + "/ticker/" + symbol.lower()).status_code == 200
 
-def account(user, other):
-    user = other if other != '' else user
-    return str(SUBSCRIBERS[user]) if user in SUBSCRIBERS else f"{user} do not have any account."
+def __authorized(bot_name, from_user, target):
+    return target == from_user or target == bot_name
 
-def historic(user, other):
-    user = other if other != '' else user
-    return SUBSCRIBERS[user].history() if user in SUBSCRIBERS else f"{user} do not have any account."
+def account(bot_name, user, other):
+    target = other if other != '' else user
+    if not __authorized(bot_name, user, target):
+        return f"You're not allowed to view {target} account."
+    return str(ACCOUNTS[target]) if target in ACCOUNTS else f"{target} do not have any account."
+
+def history(bot_name, user, other):
+    target = other if other != '' else user
+    if not __authorized(bot_name, user, target):
+        return f"You're not allowed to view {target} trades."
+    return ACCOUNTS[target].history() if target in ACCOUNTS else f"{target} do not have any account."
 
 def __float(s):
     try:
@@ -60,31 +69,31 @@ def __float(s):
     except ValueError:
         return False, 0
 
-def subscribe(user, args):
+def existsAccount(user):
+    return user in ACCOUNTS
+
+def newAccount(user, args=''):
     args = args.split(' ', 1)
     balance = args[0] if args[0] else '10000'
-    (success, balance) = __float(balance)
+    success, balance = __float(balance)
     if not success:
-        return 0, "Balance must be in decimal format. For example: 500.25"
+        return "Balance must be in decimal format. For example: 500.25"
     currency = 'USD' if len(args) < 2 else args[1]
     account = Account(user, balance, currency, MIN_TRADE)
-    SUBSCRIBERS[user] = account
-    return 0, f"Your account was created successfully.\n\n{account}"
+    ACCOUNTS[user] = account
+    return f"Your account was created successfully.\n\n{account}"
 
-def unsubscribe(user):
-    if user not in SUBSCRIBERS:
+def deleteAccount(user):
+    if user not in ACCOUNTS:
         return "You do not have any account to delete."
-    SUBSCRIBERS.pop(user)
+    ACCOUNTS.pop(user)
     return "Your account has been deleted."
 
-def __parse_args(args, length):
-    return args.replace('Alerta de TradingView: ', '', 1).split(' ', length)
-
 def trade(user, order):
-    if user not in SUBSCRIBERS:
+    if user not in ACCOUNTS:
         return "You do not have any account."
-    account = SUBSCRIBERS[user]
-    args = __parse_args(order, 3)
+    account = ACCOUNTS[user]
+    args = order.split(' ', 3)
     action = args[0].upper()
     if len(args) < 3 or action not in ORDERS:
         return "Invalid order syntax."
@@ -102,10 +111,10 @@ def trade(user, order):
         return account.sell(symbol, current, amount, FEE, comment)
 
 def tradeAll(user, order):
-    if user not in SUBSCRIBERS:
+    if user not in ACCOUNTS:
         return "You do not have any account."
-    account = SUBSCRIBERS[user]
-    args = __parse_args(order, 4)
+    account = ACCOUNTS[user]
+    args = order.split(' ', 2)
     action = args[0].upper()
     if len(args) < 2 or action not in ORDERS:
         return "Invalid order syntax."
@@ -121,9 +130,9 @@ def tradeAll(user, order):
 
 def load():
     for user in os.listdir('accounts'):
-        account = Account.load('accounts/' + user)
-        SUBSCRIBERS[user] = account
+        account = Account.load(f"accounts/{user}")
+        ACCOUNTS[user] = account
 
 def save():
-    for account in SUBSCRIBERS.values():
+    for account in ACCOUNTS.values():
         account.save(f"accounts/{account.user}")

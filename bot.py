@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import gmail as alerts
 import bitstamp as trading
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.error import Unauthorized, TimedOut
+from datetime import datetime, timedelta
 
 with open("tokens/telegram", 'r') as telegram_token:
     TELEGRAM_API_TOKEN = telegram_token.read().strip()
@@ -37,17 +39,20 @@ def reply(update, text):
 # BASIC AND DEFAULT HANDLERS
 
 def start(bot, update):
-    text = f"Hi, {update.message.from_user.first_name}! I'm KiTrader, your trading assistant!\n\nAvailable commands:"
+    user = update.message.from_user
+    text = f"Hi, {user.first_name}! I'm {NAME}, your trading assistant!\n\nAvailable commands:"
     text += "\n/start - Shows this message"
     text += "\n/ping - Test connection with trading API"
     text += "\n/price symbol - Current price for provided symbol"
+    text += f"\n/account [{NAME}, {user.username}] - View your account or the bot account"
     if is_allowed(update):
         text += "\n/newAccount {balance} {currency} - Creates an account for trading"
         text += "\n/deleteAccount - Deletes your trading account"
-        text += "\n/account {user} - View user account"
-        text += "\n/historic {user} - View user trades"
-        text += "\n/trade {BUY, SELL} amount symbol [comment] - Order a trade for your account"
-        text += "\n/tradeAll {BUY, SELL} symbol [comment] - Order a trade for your account with maximum available amount"
+        text += f"\n/history [{NAME}, {user.username}] - View your trades or the bot trades"
+        text += "\n/trade [BUY, SELL] amount symbol [comment] - Order a trade for your account"
+        text += "\n/tradeAll [BUY, SELL] symbol [comment] - Order a trade for your account with maximum available amount"
+        text += f"\n/subscribe - Receive updates from the auto-trading of {NAME} account"
+        text += f"\n/unsubscribe - Stop receiving updates from the auto-trading of {NAME} account"
     reply(update, text)
 
 def unknown(bot, update):
@@ -62,34 +67,68 @@ def send(f, args=False):
             reply(update, f(update.message.from_user.username))
     return response
 
+def account(f):
+    def response(bot, update, args):
+        reply(update, f(NAME, update.message.from_user.username, ' '.join(args)))
+    return response
+
 # SUBSCRIPTIONS
 
 SUBSCRIPTIONS = dict() # users to job
 
+UPDATE_ALERTS_SECONDS = 1800
+
+lastUpdate = datetime.now() - timedelta(days=1)
+newAlert = False
+lastAlert = None
+
+def update_alerts():
+    global lastAlert, newAlerts
+    now = datetime.now()
+    if lastUpdate < now - timedelta(minutes=20):
+        lastUpdate = now
+        alerts.login()
+        lastAlert = alerts.last_alert()
+        alerts.logout()
+        newAlert = lastAlert is not None
+
 def subscription_update(bot, job):
+    update_alerts()
     user = job.context
-    text = trading.subscription_update(user)
-    if text:
-        bot.send_message(chat_id=user, text=text)
+    if newAlert:
+        if not trading.existsAccount(NAME):
+            trading.newAccount(NAME)
+        result = trading.tradeAll(NAME, lastAlert)
+        bot.send_message(chat_id=user, text=f"🚨 {NAME} New Alert!\n\n{result}\n\nPerform /account {NAME} for more information")
+    lastUpdate = datetime.now()
 
 def subscribe(bot, update, args, job_queue):
     user = update.message.from_user.username
-    (seconds, message) = trading.subscribe(user, ' '.join(args))
-    if seconds > 0:
-        __unsubscribe(user)
-        job = job_queue.run_repeating(subscription_update, interval=seconds, first=0, context=update.message.chat_id)
+    if user not in SUBSCRIPTIONS:
+        job = job_queue.run_repeating(subscription_update, interval=UPDATE_ALERTS_SECONDS, first=0, context=update.message.chat_id)
         SUBSCRIPTIONS[user] = job
-    reply(update, message)
+        reply(update, f"Now you are subscribed to {NAME} trades.")
+    else:
+        reply(update, "Already subscribed.")
 
 def __unsubscribe(update):
     user = update.message.from_user.username
     if user in SUBSCRIPTIONS:
         SUBSCRIPTIONS[user].schedule_removal()
-    return trading.unsubscribe(user)
+        return "Unsubscribed successfully."
+    else:
+        return "You are not subscribed."
 
 def unsubscribe(bot, update):
     reply(update, __unsubscribe(update))
 
+# INITIALIZATION
+bot = Bot(TELEGRAM_API_TOKEN)
+NAME = bot.get_me().first_name
+updater = Updater(TELEGRAM_API_TOKEN)
+dispatcher = updater.dispatcher
+
+# ERROR HANDLING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def error_callback(bot, update, error):
@@ -100,34 +139,35 @@ def error_callback(bot, update, error):
     except TimedOut:
         pass
 
-bot = Bot(TELEGRAM_API_TOKEN)
-updater = Updater(TELEGRAM_API_TOKEN)
-dispatcher = updater.dispatcher
-
 dispatcher.add_error_handler(error_callback)
 
 # TRADING HANDLERS
 dispatcher.add_handler(CommandHandler('ping', send(trading.ping)))
 dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True), pass_args=True))
-dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True)), pass_args=True))
-dispatcher.add_handler(CommandHandler('newAccount', restricted(subscribe), pass_args=True, pass_job_queue=True))
-dispatcher.add_handler(CommandHandler('deleteAccount', restricted(unsubscribe)))
-dispatcher.add_handler(CommandHandler('account', restricted(send(trading.account, args=True)), pass_args=True))
-dispatcher.add_handler(CommandHandler('historic', restricted(send(trading.historic, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('account', account(trading.account), pass_args=True))
+dispatcher.add_handler(CommandHandler('history', restricted(account(trading.history)), pass_args=True))
 dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True)), pass_args=True))
 dispatcher.add_handler(CommandHandler('tradeAll', restricted(send(trading.tradeAll, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('newAccount', restricted(send(trading.newAccount, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('deleteAccount', restricted(send(trading.deleteAccount))))
+dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_args=True, pass_job_queue=True))
+dispatcher.add_handler(CommandHandler('unsubscribe', restricted(unsubscribe)))
 
 # DEFAULT HANDLERS
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 dispatcher.add_handler(MessageHandler(Filters.text, start))
 
+# START
 trading.load()
 
 updater.start_polling()
 
-print(f"{bot.get_me().username} Started!\n")
+print(f"{NAME} Started!\n")
 
 updater.idle()
 
+# STOP
+print("Saving accounts...")
 trading.save()
+print("Done! Goodbye!")

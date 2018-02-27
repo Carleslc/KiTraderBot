@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 from datetime import datetime
 
@@ -59,7 +61,8 @@ class Account:
 
     def __record(self, action, symbol, amount, price, cost, fee, comment):
         record = Account.now()
-        record += f"\n{action} {round(amount, DECIMALS)} {symbol} at {self.__price(price)} for {self.__price(cost)} with {self.__price(fee)} fees."
+        icon = '📈' if action == 'BUY' else '📉'
+        record += f"\n{icon} {action} {round(amount, DECIMALS)} {symbol} at {self.__price(price)} for {self.__price(cost)} with {self.__price(fee)} fees."
         record += f"\nEquity: {self.__price(self.equity())}"
         record += f"\nComment: {comment}" if comment else ''
         self.historic.append(record)
