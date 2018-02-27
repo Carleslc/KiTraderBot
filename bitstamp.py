@@ -54,13 +54,13 @@ def __authorized(bot_name, from_user, target):
 def account(bot_name, user, other):
     target = other if other != '' else user
     if not __authorized(bot_name, user, target):
-        return f"You're not allowed to view {target} account."
+        return f"You are not allowed to view {target} account."
     return str(ACCOUNTS[target]) if target in ACCOUNTS else f"{target} do not have any account."
 
 def history(bot_name, user, other):
     target = other if other != '' else user
     if not __authorized(bot_name, user, target):
-        return f"You're not allowed to view {target} trades."
+        return f"You are not allowed to view {target} trades."
     return ACCOUNTS[target].history() if target in ACCOUNTS else f"{target} do not have any account."
 
 def __float(s):

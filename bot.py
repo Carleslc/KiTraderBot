@@ -53,8 +53,9 @@ def start(bot, update):
         text += f"\n/history [{NAME}, {user.username}] - View your trades or the bot trades"
         text += "\n/trade [BUY, SELL] amount symbol [comment] - Order a trade for your account"
         text += "\n/tradeAll [BUY, SELL] symbol [comment] - Order a trade for your account with maximum available amount"
-        text += f"\n/subscribe - Receive updates from the auto-trading of {NAME} account"
-        text += f"\n/unsubscribe - Stop receiving updates from the auto-trading of {NAME} account"
+        text += f"\n/subscribe - Receive updates from the {NAME} auto-trading account"
+        text += f"\n/update - Forces an update of the {NAME} auto-trading subscription"
+        text += f"\n/unsubscribe - Stop receiving updates from the {NAME} auto-trading account"
     reply(update, text)
 
 def unknown(bot, update):
@@ -84,20 +85,24 @@ MAX_HOURS_ALERT = 8
 lastUpdate = datetime.now() - timedelta(hours=MAX_HOURS_ALERT)
 newAlert = False
 lastAlert = None
+updating = False
 
-def update_alerts():
-    global lastAlert, newAlert, lastUpdate
+def update_alerts(force):
+    global lastAlert, newAlert, lastUpdate, updating
+    if updating:
+        return
+    updating = True
     now = datetime.now()
-    if lastUpdate < now - timedelta(minutes=20):
+    if force or lastUpdate < now - timedelta(minutes=20):
         lastUpdate = now
         alerts.login()
         lastAlert = alerts.last_alert(datetime.now() - timedelta(hours=MAX_HOURS_ALERT))
         alerts.logout()
         newAlert = lastAlert is not None
+    updating = False
 
-def subscription_update(bot, job):
-    update_alerts()
-    chat_id = job.context
+def subscription_update(bot, chat_id, force=False):
+    update_alerts(force)
     if newAlert:
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
@@ -108,13 +113,23 @@ def subscription_update(bot, job):
         print(text)
         bot.send_message(chat_id=chat_id, text=text)
 
+def subscription_job(bot, job):
+    subscription_update(bot, chat_id=job.context)
+
+def force_update(bot, update):
+    reply(update, "Updating. Please, wait a few seconds.")
+    if not updating:
+        subscription_update(bot, update.message.chat_id, force=True)
+        if not newAlert:
+            reply(update, "Alerts are up to date.")
+
 def loadSubscriptions():
     global updater
     if path.isfile('subscriptions'):
         with open('subscriptions', 'r') as subscriptionsFile:
             subscriptionUsers = json.load(subscriptionsFile)
             for subscriptor in subscriptionUsers:
-                job = updater.job_queue.run_repeating(subscription_update, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriptor['chat_id'])
+                job = updater.job_queue.run_repeating(subscription_job, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriptor['chat_id'])
                 SUBSCRIPTIONS[subscriptor['user']] = job
 
 def saveSubscriptions():
@@ -124,7 +139,7 @@ def saveSubscriptions():
 def subscribe(bot, update, args, job_queue):
     user = update.message.from_user.username
     if user not in SUBSCRIPTIONS:
-        job = job_queue.run_repeating(subscription_update, interval=UPDATE_ALERTS_SECONDS, first=0, context=update.message.chat_id)
+        job = job_queue.run_repeating(subscription_job, interval=UPDATE_ALERTS_SECONDS, first=0, context=update.message.chat_id)
         SUBSCRIPTIONS[user] = job
         reply(update, f"Now you are subscribed to {NAME} trades.")
     else:
@@ -172,6 +187,7 @@ dispatcher.add_handler(CommandHandler('newAccount', restricted(send(trading.newA
 dispatcher.add_handler(CommandHandler('deleteAccount', restricted(send(trading.deleteAccount))))
 dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_args=True, pass_job_queue=True))
 dispatcher.add_handler(CommandHandler('unsubscribe', restricted(unsubscribe)))
+dispatcher.add_handler(CommandHandler('update', restricted(force_update)))
 
 # DEFAULT HANDLERS
 dispatcher.add_handler(CommandHandler('start', start))
