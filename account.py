@@ -33,12 +33,14 @@ class Account:
     def load(file):
         account = Account(0, 0, '', 0)
         with open(file, 'r') as account_file:
-            account.__dict__ = json.load(account_file)
+            loadedAccount = json.load(account_file)
+            account.__dict__ = loadedAccount['account']
+            account.positions.__dict__ = loadedAccount['positions']
         return account
 
     def save(self, file):
         with open(file, 'w') as account_file:
-            json.dump(self.__dict__, account_file)
+            json.dump({ 'account': self.__dict__, 'positions': self.positions.__dict__ }, account_file)
 
     def percent(d):
         return (d - 1) * 100

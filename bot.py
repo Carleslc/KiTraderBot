@@ -101,7 +101,7 @@ def subscription_update(bot, job):
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
         result = trading.tradeAll(NAME, lastAlert)
-        text = f"🚨 {NAME} New Alert!\n\n{result}\n\nPerform /account {NAME} for more information"
+        text = f"🚨 New Alert!\n\n{result}\n\nPerform /account {NAME} for more information."
         print(text)
         bot.send_message(chat_id=chat_id, text=text)
 
