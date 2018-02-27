@@ -98,11 +98,13 @@ def subscription_update(bot, job):
     update_alerts()
     chat_id = job.context
     if newAlert:
+        print("NEW ALERT. USER " + chat_id)
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
         result = trading.tradeAll(NAME, lastAlert)
-        bot.send_message(chat_id=chat_id, text=f"🚨 {NAME} New Alert!\n\n{result}\n\nPerform /account {NAME} for more information")
-    lastUpdate = datetime.now()
+        text = f"🚨 {NAME} New Alert!\n\n{result}\n\nPerform /account {NAME} for more information"
+        print(text)
+        bot.send_message(chat_id=chat_id, text=text)
 
 def loadSubscriptions():
     global bot
