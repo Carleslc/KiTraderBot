@@ -112,8 +112,8 @@ def loadSubscriptions():
         with open('subscriptions', 'r') as subscriptionsFile:
             subscriptionUsers = json.load(subscriptionsFile)
             for subscriptor in subscriptionUsers:
-                job = updater.job_queue.run_repeating(subscription_update, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriptor.chat_id)
-                SUBSCRIPTIONS[subscriptor.user] = job
+                job = updater.job_queue.run_repeating(subscription_update, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriptor['chat_id'])
+                SUBSCRIPTIONS[subscriptor['user']] = job
 
 def saveSubscriptions():
     with open('subscriptions', 'w') as subscriptionsFile:
