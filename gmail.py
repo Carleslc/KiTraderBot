@@ -45,8 +45,9 @@ def last_alert(minTime=datetime.now() - timedelta(days=1)):
     else:
         lastAlertDate = datetime.now() - timedelta(days=1)
 
-    lastAlertDate = UTC.localize(lastAlertDate)
-    minTime = UTC.localize(minTime)
+    if datetime.tzinfo is not None:
+        lastAlertDate = UTC.localize(lastAlertDate)
+        minTime = UTC.localize(minTime)
 
     lastAlertDate = max(lastAlertDate, minTime)
     print(f"Fetching alerts since {lastAlertDate}")
