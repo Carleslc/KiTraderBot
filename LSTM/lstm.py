@@ -81,7 +81,7 @@ trainY = scaler.inverse_transform(trainY)
 testPredict = scaler.inverse_transform(testPredict)
 testY = scaler.inverse_transform(testY)
 
-print("Price for last 5 days: ")
+print("Predicted price for last 5 days: ")
 print(testPredict[-5:])
 print("Bitcoin price for tomorrow: ", futurePredict)
 
