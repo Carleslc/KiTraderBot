@@ -58,7 +58,8 @@ def last_alert(minTime=datetime.now() - timedelta(days=1)):
     alerts = len(mail_ids)
 
     if alerts > 0:
-        subject, newLastAlertDate = __read_alert(mail_ids[0])
+        subject, newLastAlertDate = __read_alert(mail_ids[-1])
+        print(subject)
         if newLastAlertDate != lastAlertDate and newLastAlertDate > minTime:
             alert = f'{newLastAlertDate.strftime(DATE_TIME_FORMAT)} -> {subject}'
             print('New alert: ' + alert)
