@@ -79,8 +79,8 @@ def account(f):
 
 SUBSCRIPTIONS = dict() # users to job
 
-UPDATE_ALERTS_SECONDS = 1800
-MAX_HOURS_ALERT = 8
+UPDATE_ALERTS_SECONDS = 900
+MAX_HOURS_ALERT = 2
 
 lastUpdate = datetime.now() - timedelta(hours=MAX_HOURS_ALERT)
 newAlert = False
@@ -93,10 +93,10 @@ def update_alerts(force):
         return
     updating = True
     now = datetime.now()
-    if force or lastUpdate < now - timedelta(minutes=20):
+    if force or lastUpdate < now - timedelta(seconds=UPDATE_ALERTS_SECONDS // 2):
         lastUpdate = now
         alerts.login()
-        lastAlert = alerts.last_alert(datetime.now() - timedelta(hours=MAX_HOURS_ALERT))
+        lastAlert = alerts.last_alert(MAX_HOURS_ALERT)
         alerts.logout()
         newAlert = lastAlert is not None
     updating = False

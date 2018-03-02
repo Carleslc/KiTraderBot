@@ -1,6 +1,6 @@
 import os
 import email
-from pytz import UTC
+from pytz import timezone
 from imaplib import IMAP4_SSL
 from datetime import datetime, timedelta
 from Crypto.Cipher import AES
@@ -17,6 +17,7 @@ with open("tokens/gmail", 'rb') as gmail_token:
 with open("tokens/gmail_at", 'r') as gmail:
     GMAIL_MAIL = gmail.read().strip()
 
+TIMEZONE = timezone('Europe/Madrid')
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 INBOX = "Trading"
@@ -26,6 +27,7 @@ DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 def login():
     global mail
+    print(datetime.now(TIMEZONE))
     print(f"Logging to mail ({INBOX})...")
     mail = IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
     mail.login(GMAIL_MAIL, GMAIL_TOKEN)
@@ -38,18 +40,18 @@ def __read_alert(id):
     date = datetime.strptime(msg['date'], DATE_TIME_FORMAT)
     return subject, date
 
-def last_alert(minTime=datetime.now() - timedelta(days=1)):
+def last_alert(maxHours=8):
+    minTime = datetime.now(TIMEZONE) - timedelta(hours=maxHours)
+
     if os.path.isfile('lastAlert'):
         with open('lastAlert', 'r') as lastAlertFile:
-            lastAlertDate = datetime.strptime(lastAlertFile.read().split(' -> ', 1)[0], DATE_TIME_FORMAT)
+            lastAlert = lastAlertFile.read()
+            lastAlertDate = datetime.strptime(lastAlert.split(' -> ', 1)[0], DATE_TIME_FORMAT).astimezone(TIMEZONE)
     else:
-        lastAlertDate = datetime.now() - timedelta(days=1)
-
-    lastAlertDate = lastAlertDate.replace(tzinfo=UTC)
-    minTime = minTime.replace(tzinfo=UTC)
+        lastAlertDate = minTime
 
     lastAlertDate = max(lastAlertDate, minTime)
-    print(f"Fetching alerts since {lastAlertDate}")
+    print(f"Fetching new alerts since {lastAlertDate}")
 
     since = lastAlertDate.strftime(DATE_FORMAT)
     _, data = mail.search(None, r'(SENTSINCE {date}) (FROM "noreply@tradingview.com") (X-GM-RAW "subject:\"{prefix}\"")'.format(date=since, prefix=PREFIX))
@@ -59,14 +61,10 @@ def last_alert(minTime=datetime.now() - timedelta(days=1)):
 
     if alerts > 0:
         subject, newLastAlertDate = __read_alert(mail_ids[-1])
-        print(subject)
-        if newLastAlertDate != lastAlertDate and newLastAlertDate > minTime:
-            alert = f'{newLastAlertDate.strftime(DATE_TIME_FORMAT)} -> {subject}'
-            print('New alert: ' + alert)
-
+        if newLastAlertDate != lastAlertDate and newLastAlertDate > lastAlertDate:
+            alert = f'{newLastAlertDate.astimezone(TIMEZONE).strftime(DATE_TIME_FORMAT)} -> {subject}'
             with open('lastAlert', 'w') as lastAlertFile:
                 lastAlertFile.write(alert)
-
             return subject
 
     print('Alerts are up to date')
