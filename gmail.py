@@ -7,15 +7,15 @@ from Crypto.Cipher import AES
 
 def decrypt(ciphertext):
     iv = ciphertext[:AES.block_size]
-    cipher = AES.new('038,6gb(dHhjf-0L', AES.MODE_CBC, iv)
+    cipher = AES.new(b'038,6gb(dHhjf-0L', AES.MODE_CBC, iv.encode('utf8'))
     plaintext = cipher.decrypt(ciphertext[AES.block_size:])
-    return plaintext.rstrip(b"\0")
+    return plaintext.rstrip(b"\0").decode('utf8')
 
 ENABLED = True
 
 try:
     with open("tokens/gmail", 'rb') as gmail_token:
-        GMAIL_TOKEN = str(decrypt(gmail_token.read().strip()).strip(), 'utf-8')
+        GMAIL_TOKEN = decrypt(gmail_token.read().strip()).strip()
 
     with open("tokens/gmail_at", 'r') as gmail:
         GMAIL_MAIL = gmail.read().strip()
