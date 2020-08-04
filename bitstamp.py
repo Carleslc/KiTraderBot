@@ -4,6 +4,7 @@ import os
 from account import *
 from json import loads as json
 from requests import get
+from pathlib import Path
 
 BASE_URL = "https://www.bitstamp.net/api/v2"
 
@@ -132,6 +133,7 @@ def tradeAll(user, order):
         return account.sell_all(symbol, current, FEE, comment)
 
 def load():
+    Path('accounts').mkdir(parents=True, exist_ok=True)
     for user in os.listdir('accounts'):
         account = Account.load(f"accounts/{user}")
         ACCOUNTS[user] = account
