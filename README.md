@@ -64,6 +64,6 @@ python3 bot.py
 #### Docker
 
 ```bash
+docker build -t kitraderbot .
 docker-compose up -d
 ```
-
