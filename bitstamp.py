@@ -7,7 +7,7 @@ from requests import get
 
 BASE_URL = "https://www.bitstamp.net/api/v2"
 
-FEE = 0.0025
+FEE = 0.005
 MIN_TRADE = 5
 
 REQUESTS_LIMIT_PER_MINUTE = 60
