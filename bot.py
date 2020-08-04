@@ -65,7 +65,7 @@ def start(update, context):
         text += f"\n/unsubscribe - Stop receiving updates from the {NAME} auto-trading account"
     reply(update, text)
 
-def unknown(update):
+def unknown(update, context):
     reply(update, f"Sorry, I didn't understand command {update.message.text}.")
 
 def send(f, args=False):
@@ -164,7 +164,7 @@ def __unsubscribe(update):
     else:
         return "You are not subscribed."
 
-def unsubscribe(update):
+def unsubscribe(update, context):
     reply(update, __unsubscribe(update))
 
 # INITIALIZATION
