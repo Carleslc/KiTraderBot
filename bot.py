@@ -12,11 +12,18 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.error import Unauthorized, TimedOut
 from datetime import datetime, timedelta
 
-with open("tokens/telegram", 'r') as telegram_token:
-    TELEGRAM_API_TOKEN = telegram_token.read().strip()
+try:
+    with open("tokens/telegram", 'r') as telegram_token:
+        TELEGRAM_API_TOKEN = telegram_token.read().strip()
+except FileNotFoundError:
+    print("tokens/telegram not found!")
+    exit(1)
 
-with open("users", 'r') as users:
-    ALLOWED_USERS = set(users.read().split('\n'))
+try:
+    with open("users", 'r') as users:
+        ALLOWED_USERS = set(users.read().split('\n'))
+except FileNotFoundError:
+    ALLOWED_USERS = set()
 
 NOT_ALLOWED = "You're not allowed to use this command."
 

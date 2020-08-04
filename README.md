@@ -13,6 +13,14 @@ https://python-telegram-bot.org/
 pip3 install python-telegram-bot pytz pycryptodome
 ```
 
+#### Telegram
+
+Create your bot and get an Access Token with https://core.telegram.org/bots#6-botfather
+
+Create a new folder **`tokens`**
+
+Create a new file **`tokens/telegram`** and paste your bot token there.
+
 #### Bitstamp
 
 Get API key and secret from https://www.bitstamp.net/account/security/api/
@@ -30,6 +38,10 @@ Get API key and secret from https://www.binance.com/en/usercenter/settings/api-m
 **`tokens/binance`**
 
 **`tokens/binance_secret`**
+
+#### Allow users to subscription / trading
+
+Create a file **`users`** and enter each user in a new line for granting permissions.
 
 #### Read alerts from Gmail
 
