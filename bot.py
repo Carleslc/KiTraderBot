@@ -160,7 +160,7 @@ def unsubscribe(bot, update):
 # INITIALIZATION
 bot = Bot(TELEGRAM_API_TOKEN)
 NAME = bot.get_me().first_name
-updater = Updater(TELEGRAM_API_TOKEN)
+updater = Updater(TELEGRAM_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
 # ERROR HANDLING
