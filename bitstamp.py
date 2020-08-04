@@ -4,10 +4,11 @@ import os
 from account import *
 from json import loads as json
 from requests import get
+from pathlib import Path
 
 BASE_URL = "https://www.bitstamp.net/api/v2"
 
-FEE = 0.0025
+FEE = 0.005
 MIN_TRADE = 5
 
 REQUESTS_LIMIT_PER_MINUTE = 60
@@ -15,11 +16,14 @@ REQUESTS_LIMIT_PER_SECOND = REQUESTS_LIMIT_PER_MINUTE // 60
 
 ORDERS = set(['BUY', 'SELL'])
 
-with open("tokens/bitstamp", 'r') as bitstamp_token:
-    BINANCE_API_TOKEN = bitstamp_token.read().strip()
+try:
+    with open("tokens/bitstamp", 'r') as bitstamp_token:
+        BITSTAMP_API_TOKEN = bitstamp_token.read().strip()
 
-with open("tokens/bitstamp_secret", 'r') as bitstamp_secret:
-    BINANCE_API_SECRET = bitstamp_secret.read().strip()
+    with open("tokens/bitstamp_secret", 'r') as bitstamp_secret:
+        BITSTAMP_API_SECRET = bitstamp_secret.read().strip()
+except FileNotFoundError:
+    print("Bitstamp token not found")
 
 ACCOUNTS = dict() # user to Account
 
@@ -74,11 +78,11 @@ def existsAccount(user):
 
 def newAccount(user, args=''):
     args = args.split(' ', 1)
-    balance = args[0] if args[0] else '10000'
+    balance = args[0] if args[0] else '1000'
     success, balance = __float(balance)
     if not success:
         return "Balance must be in decimal format. For example: 500.25"
-    currency = 'USD' if len(args) < 2 else args[1]
+    currency = 'EUR' if len(args) < 2 else args[1]
     account = Account(user, balance, currency, MIN_TRADE)
     ACCOUNTS[user] = account
     return f"Your account was created successfully.\n\n{account}"
@@ -129,6 +133,7 @@ def tradeAll(user, order):
         return account.sell_all(symbol, current, FEE, comment)
 
 def load():
+    Path('accounts').mkdir(parents=True, exist_ok=True)
     for user in os.listdir('accounts'):
         account = Account.load(f"accounts/{user}")
         ACCOUNTS[user] = account

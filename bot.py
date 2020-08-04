@@ -5,17 +5,25 @@ import logging
 import json
 import gmail as alerts
 import bitstamp as trading
+
 from os import path
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.error import Unauthorized, TimedOut
 from datetime import datetime, timedelta
 
-with open("tokens/telegram", 'r') as telegram_token:
-    TELEGRAM_API_TOKEN = telegram_token.read().strip()
+try:
+    with open("tokens/telegram", 'r') as telegram_token:
+        TELEGRAM_API_TOKEN = telegram_token.read().strip()
+except FileNotFoundError:
+    print("tokens/telegram not found!")
+    exit(1)
 
-with open("users", 'r') as users:
-    ALLOWED_USERS = set(users.read().split('\n'))
+try:
+    with open("users", 'r') as users:
+        ALLOWED_USERS = set(users.read().split('\n'))
+except FileNotFoundError:
+    ALLOWED_USERS = set()
 
 NOT_ALLOWED = "You're not allowed to use this command."
 
@@ -25,22 +33,21 @@ def debug(update, answer):
 def is_allowed(update):
     return update.message.from_user.username in ALLOWED_USERS
 
-def restricted(handler):
-    def response(bot, update, **kwargs):
-        if is_allowed(update):
-            handler(bot, update, **kwargs)
-        else:
-            debug(update, NOT_ALLOWED)
-            update.message.reply_text(NOT_ALLOWED)
-    return response
-
 def reply(update, text):
     debug(update, text)
     update.message.reply_text(text)
 
+def restricted(handler):
+    def response(update, context, **kwargs):
+        if is_allowed(update):
+            handler(update, context, **kwargs)
+        else:
+            reply(update, NOT_ALLOWED)
+    return response
+
 # BASIC AND DEFAULT HANDLERS
 
-def start(bot, update):
+def start(update, context):
     user = update.message.from_user
     text = f"Hi, {user.first_name}! I'm {NAME}, your trading assistant!\n\nAvailable commands:"
     text += "\n/start - Shows this message"
@@ -58,21 +65,21 @@ def start(bot, update):
         text += f"\n/unsubscribe - Stop receiving updates from the {NAME} auto-trading account"
     reply(update, text)
 
-def unknown(bot, update):
+def unknown(update, context):
     reply(update, f"Sorry, I didn't understand command {update.message.text}.")
 
 def send(f, args=False):
     if args:
-        def response(bot, update, args):
-            reply(update, f(update.message.from_user.username, ' '.join(args)))
+        def response(update, context):
+            reply(update, f(update.message.from_user.username, ' '.join(context.args)))
     else:
-        def response(bot, update):
+        def response(update, context):
             reply(update, f(update.message.from_user.username))
     return response
 
 def account(f):
-    def response(bot, update, args):
-        reply(update, f(NAME, update.message.from_user.username, ' '.join(args)))
+    def response(update, context):
+        reply(update, f(NAME, update.message.from_user.username, ' '.join(context.args)))
     return response
 
 # SUBSCRIPTIONS
@@ -89,7 +96,7 @@ updating = False
 
 def update_alerts(force):
     global lastAlert, newAlert, lastUpdate, updating
-    if updating:
+    if updating or not alerts.ENABLED:
         return
     updating = True
     now = datetime.now()
@@ -113,13 +120,16 @@ def subscription_update(bot, chat_id, force=False):
         print(text)
         bot.send_message(chat_id=chat_id, text=text)
 
-def subscription_job(bot, job):
-    subscription_update(bot, chat_id=job.context)
+def subscription_job(context):
+    subscription_update(context.bot, chat_id=context.job.context)
 
-def force_update(bot, update):
+def force_update(update, context):
+    if not alerts.ENABLED:
+        reply(update, "Alerts are disabled.")
+        return
     reply(update, "Updating. Please, wait a few seconds.")
     if not updating:
-        subscription_update(bot, update.message.chat_id, force=True)
+        subscription_update(context.bot, update.message.chat_id, force=True)
         if not newAlert:
             reply(update, "Alerts are up to date.")
 
@@ -128,18 +138,18 @@ def loadSubscriptions():
     if path.isfile('subscriptions'):
         with open('subscriptions', 'r') as subscriptionsFile:
             subscriptionUsers = json.load(subscriptionsFile)
-            for subscriptor in subscriptionUsers:
-                job = updater.job_queue.run_repeating(subscription_job, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriptor['chat_id'])
-                SUBSCRIPTIONS[subscriptor['user']] = job
+            for subscriber in subscriptionUsers:
+                job = updater.job_queue.run_repeating(subscription_job, interval=UPDATE_ALERTS_SECONDS, first=30, context=subscriber['chat_id'])
+                SUBSCRIPTIONS[subscriber['user']] = job
 
 def saveSubscriptions():
     with open('subscriptions', 'w') as subscriptionsFile:
         json.dump([{ 'user': user, 'chat_id': job.context } for user, job in SUBSCRIPTIONS.items()], subscriptionsFile)
 
-def subscribe(bot, update, args, job_queue):
+def subscribe(update, context):
     user = update.message.from_user.username
     if user not in SUBSCRIPTIONS:
-        job = job_queue.run_repeating(subscription_job, interval=UPDATE_ALERTS_SECONDS, first=0, context=update.message.chat_id)
+        job = context.job_queue.run_repeating(subscription_job, interval=UPDATE_ALERTS_SECONDS, first=0, context=update.message.chat_id)
         SUBSCRIPTIONS[user] = job
         reply(update, f"Now you are subscribed to {NAME} trades.")
     else:
@@ -154,38 +164,42 @@ def __unsubscribe(update):
     else:
         return "You are not subscribed."
 
-def unsubscribe(bot, update):
+def unsubscribe(update, context):
     reply(update, __unsubscribe(update))
 
 # INITIALIZATION
+print("Starting bot...")
+
 bot = Bot(TELEGRAM_API_TOKEN)
 NAME = bot.get_me().first_name
-updater = Updater(TELEGRAM_API_TOKEN)
+updater = Updater(TELEGRAM_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
 # ERROR HANDLING
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-def error_callback(bot, update, error):
+def error_callback(update, context):
     try:
-        raise error
+        raise context.error
     except Unauthorized:
         __unsubscribe(update)
     except TimedOut:
         pass
 
+print('Adding command handlers...')
+
 dispatcher.add_error_handler(error_callback)
 
 # TRADING HANDLERS
 dispatcher.add_handler(CommandHandler('ping', send(trading.ping)))
-dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True), pass_args=True))
-dispatcher.add_handler(CommandHandler('account', account(trading.account), pass_args=True))
-dispatcher.add_handler(CommandHandler('history', restricted(account(trading.history)), pass_args=True))
-dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True)), pass_args=True))
-dispatcher.add_handler(CommandHandler('tradeAll', restricted(send(trading.tradeAll, args=True)), pass_args=True))
-dispatcher.add_handler(CommandHandler('newAccount', restricted(send(trading.newAccount, args=True)), pass_args=True))
+dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True)))
+dispatcher.add_handler(CommandHandler('account', account(trading.account)))
+dispatcher.add_handler(CommandHandler('history', restricted(account(trading.history))))
+dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True))))
+dispatcher.add_handler(CommandHandler('tradeAll', restricted(send(trading.tradeAll, args=True))))
+dispatcher.add_handler(CommandHandler('newAccount', restricted(send(trading.newAccount, args=True))))
 dispatcher.add_handler(CommandHandler('deleteAccount', restricted(send(trading.deleteAccount))))
-dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_args=True, pass_job_queue=True))
+dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_job_queue=True))
 dispatcher.add_handler(CommandHandler('unsubscribe', restricted(unsubscribe)))
 dispatcher.add_handler(CommandHandler('update', restricted(force_update)))
 
@@ -195,12 +209,15 @@ dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 dispatcher.add_handler(MessageHandler(Filters.text, start))
 
 # START
+print('Loading trading API...')
 trading.load()
+
+print('Loading subscriptions...')
 loadSubscriptions()
 
 updater.start_polling()
 
-print(f"{NAME} Started!\n")
+print(f"\n{NAME} Started!\n")
 
 updater.idle()
 
@@ -208,4 +225,5 @@ updater.idle()
 print("Saving accounts...")
 trading.save()
 saveSubscriptions()
+
 print("Done! Goodbye!")

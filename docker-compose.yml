@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  kitraderbot:
+    image: kitraderbot:latest
+    container_name: kitraderbot
+    restart: unless-stopped
+    volumes:
+      - .:/usr/src/KiTraderBot

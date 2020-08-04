@@ -8,11 +8,14 @@ BASE_URL = "https://api.binance.com"
 REQUESTS_LIMIT_PER_MINUTE = 1200
 REQUESTS_LIMIT_PER_SECOND = REQUESTS_LIMIT_PER_MINUTE // 60
 
-with open("tokens/binance", 'r') as binance_token:
-    BINANCE_API_TOKEN = binance_token.read().strip()
+try:
+    with open("tokens/binance", 'r') as binance_token:
+        BINANCE_API_TOKEN = binance_token.read().strip()
 
-with open("tokens/binance_secret", 'r') as binance_secret:
-    BINANCE_API_SECRET = binance_secret.read().strip()
+    with open("tokens/binance_secret", 'r') as binance_secret:
+        BINANCE_API_SECRET = binance_secret.read().strip()
+except FileNotFoundError:
+    print("Binance token not found")
 
 SUBSCRIPTION_UPDATE_SECONDS = 60
 SUBSCRIBERS = dict() # users to symbol

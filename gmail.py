@@ -7,31 +7,39 @@ from Crypto.Cipher import AES
 
 def decrypt(ciphertext):
     iv = ciphertext[:AES.block_size]
-    cipher = AES.new('038,6gb(dHhjf-0L', AES.MODE_CBC, iv)
+    cipher = AES.new(b'038,6gb(dHhjf-0L', AES.MODE_CBC, iv)
     plaintext = cipher.decrypt(ciphertext[AES.block_size:])
-    return plaintext.rstrip(b"\0")
+    return plaintext.rstrip(b"\0").decode('utf8')
 
-with open("tokens/gmail", 'rb') as gmail_token:
-    GMAIL_TOKEN = str(decrypt(gmail_token.read().strip()).strip(), 'utf-8')
+ENABLED = True
 
-with open("tokens/gmail_at", 'r') as gmail:
-    GMAIL_MAIL = gmail.read().strip()
+try:
+    with open("tokens/gmail", 'rb') as gmail_token:
+        GMAIL_TOKEN = decrypt(gmail_token.read().strip()).strip()
+
+    with open("tokens/gmail_at", 'r') as gmail:
+        GMAIL_MAIL = gmail.read().strip()
+except FileNotFoundError:
+    print("Alerts from Gmail are disabled")
+    ENABLED = False
 
 TIMEZONE = timezone('Europe/Madrid')
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 INBOX = "Trading"
-PREFIX = "Alerta de TradingView: "
+PREFIX = "Alerta: "
+
 DATE_FORMAT = "%d-%b-%Y"
 DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 def login():
     global mail
-    print(datetime.now(TIMEZONE))
-    print(f"Logging to mail ({INBOX})...")
-    mail = IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-    mail.login(GMAIL_MAIL, GMAIL_TOKEN)
-    mail.select(INBOX)
+    if ENABLED:
+        print(datetime.now(TIMEZONE))
+        print(f"Logging to mail ({INBOX})...")
+        mail = IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        mail.login(GMAIL_MAIL, GMAIL_TOKEN)
+        mail.select(INBOX)
 
 def __read_alert(id):
     _, data = mail.uid('fetch', id, 'BODY.PEEK[HEADER.FIELDS (SUBJECT DATE)]')
@@ -41,6 +49,9 @@ def __read_alert(id):
     return subject, date
 
 def last_alert(maxHours=8):
+    if not ENABLED:
+        return None
+    
     minTime = datetime.now(TIMEZONE) - timedelta(hours=maxHours)
 
     if os.path.isfile('lastAlert'):
@@ -62,16 +73,19 @@ def last_alert(maxHours=8):
     if alerts > 0:
         subject, newLastAlertDate = __read_alert(mail_ids[-1])
         if newLastAlertDate != lastAlertDate and newLastAlertDate > lastAlertDate:
-            alert = f'{newLastAlertDate.astimezone(TIMEZONE).strftime(DATE_TIME_FORMAT)} -> {subject}'
+            alertParts = subject.split()
+            alertText = f"{alertParts[0].upper()} {' '.join(alertParts[1:])}"
+            alert = f'{newLastAlertDate.astimezone(TIMEZONE).strftime(DATE_TIME_FORMAT)} -> {alertText}'
             with open('lastAlert', 'w') as lastAlertFile:
                 lastAlertFile.write(alert)
-            return subject
+            return alertText
 
     print('Alerts are up to date')
     return None
 
 def logout():
-    mail.close()
+    if mail is not None:
+        mail.close()
 
 if __name__ == '__main__':
     login()
