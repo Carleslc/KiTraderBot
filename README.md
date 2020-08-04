@@ -3,6 +3,23 @@ Trading bot simulator for Telegram. Supports Bitstamp & Binance APIs.
 
 [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/carleslc)
 
+## Commands
+
+```
+/start - Shows this message
+/ping - Test connection with trading API
+/price symbol - Current price for provided symbol
+/account [KiTrader, Carleslc] - View your account or the bot account
+/newAccount [balance] [currency] - Creates an account for trading
+/deleteAccount - Deletes your trading account
+/history [KiTrader, Carleslc] - View your trades or the bot trades
+/trade [BUY, SELL] amount symbol [comment] - Order a trade for your account
+/tradeAll [BUY, SELL] symbol [comment] - Order a trade for your account with maximum available amount
+/subscribe - Receive updates from the KiTrader auto-trading account
+/update - Forces an update of the KiTrader auto-trading subscription
+/unsubscribe - Stop receiving updates from the KiTrader auto-trading account
+```
+
 ## Install
 
 #### Dependencies
@@ -44,6 +61,8 @@ Get API key and secret from https://www.binance.com/en/usercenter/settings/api-m
 Create a file **`users`** and enter each user in a new line for granting permissions.
 
 #### Read alerts from Gmail
+
+This bot can read alerts from email and put buy/sell orders in a simulated account for testing strategies.
 
 Update `gmail.py` constants to identify alerts.
 
