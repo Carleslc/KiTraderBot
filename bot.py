@@ -5,6 +5,7 @@ import logging
 import json
 import gmail as alerts
 import bitstamp as trading
+
 from os import path
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -89,7 +90,7 @@ updating = False
 
 def update_alerts(force):
     global lastAlert, newAlert, lastUpdate, updating
-    if updating:
+    if updating or not alerts.ENABLED:
         return
     updating = True
     now = datetime.now()
@@ -117,6 +118,9 @@ def subscription_job(bot, job):
     subscription_update(bot, chat_id=job.context)
 
 def force_update(bot, update):
+    if not alerts.ENABLED:
+        reply(update, "Alerts are disabled.")
+        return
     reply(update, "Updating. Please, wait a few seconds.")
     if not updating:
         subscription_update(bot, update.message.chat_id, force=True)

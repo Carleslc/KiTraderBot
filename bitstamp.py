@@ -15,11 +15,14 @@ REQUESTS_LIMIT_PER_SECOND = REQUESTS_LIMIT_PER_MINUTE // 60
 
 ORDERS = set(['BUY', 'SELL'])
 
-with open("tokens/bitstamp", 'r') as bitstamp_token:
-    BINANCE_API_TOKEN = bitstamp_token.read().strip()
+try:
+    with open("tokens/bitstamp", 'r') as bitstamp_token:
+        BITSTAMP_API_TOKEN = bitstamp_token.read().strip()
 
-with open("tokens/bitstamp_secret", 'r') as bitstamp_secret:
-    BINANCE_API_SECRET = bitstamp_secret.read().strip()
+    with open("tokens/bitstamp_secret", 'r') as bitstamp_secret:
+        BITSTAMP_API_SECRET = bitstamp_secret.read().strip()
+except FileNotFoundError:
+    print("Bitstamp token not found")
 
 ACCOUNTS = dict() # user to Account
 

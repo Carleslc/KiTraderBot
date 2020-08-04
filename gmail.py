@@ -11,27 +11,35 @@ def decrypt(ciphertext):
     plaintext = cipher.decrypt(ciphertext[AES.block_size:])
     return plaintext.rstrip(b"\0")
 
-with open("tokens/gmail", 'rb') as gmail_token:
-    GMAIL_TOKEN = str(decrypt(gmail_token.read().strip()).strip(), 'utf-8')
+ENABLED = True
 
-with open("tokens/gmail_at", 'r') as gmail:
-    GMAIL_MAIL = gmail.read().strip()
+try:
+    with open("tokens/gmail", 'rb') as gmail_token:
+        GMAIL_TOKEN = str(decrypt(gmail_token.read().strip()).strip(), 'utf-8')
+
+    with open("tokens/gmail_at", 'r') as gmail:
+        GMAIL_MAIL = gmail.read().strip()
+except FileNotFoundError:
+    print("Alerts from Gmail are disabled")
+    ENABLED = False
 
 TIMEZONE = timezone('Europe/Madrid')
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 INBOX = "Trading"
 PREFIX = "Alerta de TradingView: "
+
 DATE_FORMAT = "%d-%b-%Y"
 DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 def login():
     global mail
-    print(datetime.now(TIMEZONE))
-    print(f"Logging to mail ({INBOX})...")
-    mail = IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-    mail.login(GMAIL_MAIL, GMAIL_TOKEN)
-    mail.select(INBOX)
+    if ENABLED:
+        print(datetime.now(TIMEZONE))
+        print(f"Logging to mail ({INBOX})...")
+        mail = IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        mail.login(GMAIL_MAIL, GMAIL_TOKEN)
+        mail.select(INBOX)
 
 def __read_alert(id):
     _, data = mail.uid('fetch', id, 'BODY.PEEK[HEADER.FIELDS (SUBJECT DATE)]')
@@ -41,6 +49,9 @@ def __read_alert(id):
     return subject, date
 
 def last_alert(maxHours=8):
+    if not ENABLED:
+        return None
+    
     minTime = datetime.now(TIMEZONE) - timedelta(hours=maxHours)
 
     if os.path.isfile('lastAlert'):
@@ -71,7 +82,8 @@ def last_alert(maxHours=8):
     return None
 
 def logout():
-    mail.close()
+    if mail is not None:
+        mail.close()
 
 if __name__ == '__main__':
     login()
