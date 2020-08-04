@@ -10,7 +10,7 @@ Trading bot simulator for Telegram. Supports Bitstamp & Binance APIs.
 https://python-telegram-bot.org/
 
 ```bash
-pip3 install python-telegram-bot pytz pycryptodome
+python3 -m pip install -r dependencies.txt
 ```
 
 #### Telegram
@@ -52,4 +52,18 @@ Read header and use `oauth2.py` to get your token credentials.
 **`tokens/gmail_at`** your email address
 
 **`tokens/gmail`** token credentials
+
+### Deploy
+
+#### Run
+
+```bash
+python3 bot.py
+```
+
+#### Docker
+
+```bash
+docker-compose up -d
+```
 

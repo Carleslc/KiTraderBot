@@ -185,6 +185,8 @@ def error_callback(bot, update, error):
     except TimedOut:
         pass
 
+print('Adding command handlers...')
+
 dispatcher.add_error_handler(error_callback)
 
 # TRADING HANDLERS
@@ -206,12 +208,15 @@ dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 dispatcher.add_handler(MessageHandler(Filters.text, start))
 
 # START
+print('Loading trading API...')
 trading.load()
+
+print('Loading subscriptions...')
 loadSubscriptions()
 
 updater.start_polling()
 
-print(f"{NAME} Started!\n")
+print(f"\n{NAME} Started!\n")
 
 updater.idle()
 
@@ -219,4 +224,5 @@ updater.idle()
 print("Saving accounts...")
 trading.save()
 saveSubscriptions()
+
 print("Done! Goodbye!")
