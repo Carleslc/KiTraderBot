@@ -11,4 +11,4 @@ services:
     command: >
       sh -c "pip install --upgrade pip
       && pip install --no-cache-dir -r dependencies.txt
-      && python bot.py"
+      && python -u bot.py"
