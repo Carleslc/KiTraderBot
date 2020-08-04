@@ -78,11 +78,11 @@ def existsAccount(user):
 
 def newAccount(user, args=''):
     args = args.split(' ', 1)
-    balance = args[0] if args[0] else '10000'
+    balance = args[0] if args[0] else '1000'
     success, balance = __float(balance)
     if not success:
         return "Balance must be in decimal format. For example: 500.25"
-    currency = 'USD' if len(args) < 2 else args[1]
+    currency = 'EUR' if len(args) < 2 else args[1]
     account = Account(user, balance, currency, MIN_TRADE)
     ACCOUNTS[user] = account
     return f"Your account was created successfully.\n\n{account}"

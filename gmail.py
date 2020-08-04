@@ -27,7 +27,7 @@ TIMEZONE = timezone('Europe/Madrid')
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
 INBOX = "Trading"
-PREFIX = "Alerta de TradingView: "
+PREFIX = "Alerta: "
 
 DATE_FORMAT = "%d-%b-%Y"
 DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
