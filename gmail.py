@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 
 def decrypt(ciphertext):
     iv = ciphertext[:AES.block_size]
-    cipher = AES.new(b'038,6gb(dHhjf-0L', AES.MODE_CBC, iv.encode('utf8'))
+    cipher = AES.new(b'038,6gb(dHhjf-0L', AES.MODE_CBC, iv)
     plaintext = cipher.decrypt(ciphertext[AES.block_size:])
     return plaintext.rstrip(b"\0").decode('utf8')
 
