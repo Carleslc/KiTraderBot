@@ -74,7 +74,7 @@ def last_alert(maxHours=8):
         subject, newLastAlertDate = __read_alert(mail_ids[-1])
         if newLastAlertDate != lastAlertDate and newLastAlertDate > lastAlertDate:
             alertParts = subject.split()
-            alertText = f"{alertParts[0].upper()} {' '.join(alertParts[1:]}"
+            alertText = f"{alertParts[0].upper()} {' '.join(alertParts[1:])}"
             alert = f'{newLastAlertDate.astimezone(TIMEZONE).strftime(DATE_TIME_FORMAT)} -> {alertText}'
             with open('lastAlert', 'w') as lastAlertFile:
                 lastAlertFile.write(alert)
