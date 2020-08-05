@@ -46,8 +46,7 @@ def get_price(symbol):
 
 def price(user, symbol):
     if not symbol:
-        account = ACCOUNTS[user]
-        currency = 'USD' if account is None else account.currency
+        currency = ACCOUNTS[user].currency if user in ACCOUNTS else 'USD'
         symbol = f'BTC{currency}'
     return __price(symbol, lambda current: f"{symbol.upper()}: {current}")
 
