@@ -54,7 +54,7 @@ class Account:
         return '\n\n'.join(self.historic) if len(self.historic) > 0 else "No trades found."
 
     def now():
-        return datetime.now().strftime("%d-%m-%Y %H:%M:%S %z")
+        return datetime.now().strftime("%d-%m-%Y %H:%M:%S %Z")
 
     def __price(self, p):
         return f"{round(p, 2)} {self.currency}"
