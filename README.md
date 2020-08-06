@@ -48,7 +48,7 @@ Get API key and secret from https://www.bitstamp.net/account/security/api/
 
 #### Binance
 
-Change `import bitstamp as trading` to `import binance as trading` in `bot.py`.
+Change `import bitstamp as trading` to `import binance as trading` in `bot.py` and `account.py`.
 
 Get API key and secret from https://www.binance.com/en/usercenter/settings/api-management
 

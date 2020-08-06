@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import bitstamp as trading
 from datetime import datetime
 
 DECIMALS = 7
@@ -27,8 +28,9 @@ class Account:
 
     def __str__(self):
         positions = '\nPositions:\n' + '\n'.join(map(lambda p: '\t- ' + str(p), self.positions.values())) if len(self.positions) > 0 else ''
-        ret = Account.percent(self.balance / self.initial_balance)
-        return f"User: {self.user}\nBalance: {self.__price(self.balance)}\nEquity: {self.__price(self.equity())}\nReturn: {round(ret, 3)}%{positions}"
+        equity = self.equity()
+        ret = Account.percent(equity / self.initial_balance)
+        return f"User: {self.user}\nBalance: {self.__price(self.balance)}\nEquity: {self.__price(equity)}\nReturn: {round(ret, 3)}%{positions}"
 
     def load(file):
         with open(file, 'r') as account_file:
@@ -67,8 +69,7 @@ class Account:
         return record
 
     def equity(self):
-        from bitstamp import get_price
-        return self.balance + sum(list(map(lambda p: p.amount * get_price(p.symbol + self.currency), self.positions.values())))
+        return self.balance + sum(list(map(lambda p: p.amount * trading.get_price(p.symbol + self.currency), self.positions.values())))
 
     def buy(self, symbol, current, amount, fee, comment=''):
         if self.balance <= 0:
