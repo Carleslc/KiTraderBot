@@ -53,6 +53,7 @@ def start(update, context):
     text += "\n/start - Shows this message"
     text += "\n/ping - Test connection with trading API"
     text += "\n/price symbol - Current price for provided symbol"
+    text += "\n/list - Show the available symbols"
     text += f"\n/account [{NAME}, {user.username}] - View your account or the bot account"
     if is_allowed(update):
         text += "\n/newAccount [balance] [currency] - Creates an account for trading"
@@ -67,6 +68,11 @@ def start(update, context):
 
 def unknown(update, context):
     reply(update, f"Sorry, I didn't understand command {update.message.text}.")
+
+def wrap(f):
+    def response(update, context):
+        reply(update, f())
+    return response
 
 def send(f, args=False):
     if args:
@@ -191,8 +197,9 @@ print('Adding command handlers...')
 dispatcher.add_error_handler(error_callback)
 
 # TRADING HANDLERS
-dispatcher.add_handler(CommandHandler('ping', send(trading.ping)))
+dispatcher.add_handler(CommandHandler('ping', wrap(trading.ping)))
 dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True)))
+dispatcher.add_handler(CommandHandler('list', wrap(trading.list_symbols)))
 dispatcher.add_handler(CommandHandler('account', account(trading.account)))
 dispatcher.add_handler(CommandHandler('history', restricted(account(trading.history))))
 dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True))))

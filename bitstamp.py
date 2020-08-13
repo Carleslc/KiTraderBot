@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import os
-from account import *
+import os, re
+from account import Account
 from json import loads as json
 from requests import get
 from pathlib import Path
@@ -15,6 +15,8 @@ REQUESTS_LIMIT_PER_MINUTE = 60
 REQUESTS_LIMIT_PER_SECOND = REQUESTS_LIMIT_PER_MINUTE // 60
 
 ORDERS = set(['BUY', 'SELL'])
+
+NON_ALPHA = r'[^a-zA-Z]'
 
 try:
     with open("tokens/bitstamp", 'r') as bitstamp_token:
@@ -35,23 +37,30 @@ def __get(url, callback):
     else:
         return f"Cannot connect to Bitstamp API: {code}"
 
-def ping(user):
+def ping():
     return __get("/ticker/btcusd", lambda _: "Bitstamp API seems to be working.")
 
+def list_symbols():
+    return __get("/trading-pairs-info", lambda data: '\n'.join(map(lambda pair: f"{pair.url_symbol} - {pair.name}", data)))
+
+def __symbol(symbol):
+    return re.sub(NON_ALPHA, symbol.lower(), '')
+
 def __price(symbol, callback):
-    return __get("/ticker/" + symbol.lower(), lambda data: callback(data.get('last')))
+    return __get("/ticker/" + symbol, lambda data: callback(data.get('last')))
 
 def get_price(symbol):
-    return __price(symbol, lambda price: float(price))
+    return __price(__symbol(symbol), lambda price: float(price))
 
 def price(user, symbol):
     if not symbol:
         currency = ACCOUNTS[user].currency if user in ACCOUNTS else 'USD'
         symbol = f'BTC{currency}'
+    symbol = __symbol(symbol)
     return __price(symbol, lambda current: f"{symbol.upper()}: {current}")
 
 def __exists(symbol):
-    return get(BASE_URL + "/ticker/" + symbol.lower()).status_code == 200
+    return get(BASE_URL + "/ticker/" + __symbol(symbol)).status_code == 200
 
 def __authorized(bot_name, from_user, target):
     return target == from_user or target == bot_name
