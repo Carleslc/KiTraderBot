@@ -86,4 +86,7 @@ python3 bot.py
 ```bash
 docker build -t kitraderbot .
 docker-compose up -d
+
+# Update (after build)
+docker-compose restart kitraderbot
 ```
