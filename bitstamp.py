@@ -41,7 +41,7 @@ def ping():
     return __get("/ticker/btcusd", lambda _: "Bitstamp API seems to be working.")
 
 def list_symbols():
-    return __get("/trading-pairs-info", lambda data: '\n'.join(map(lambda pair: f"{pair.url_symbol} - {pair.name}", data)))
+    return __get("/trading-pairs-info", lambda data: '\n'.join(map(lambda pair: f"{pair.get('url_symbol')} - {pair.get('name')}", data)))
 
 def __symbol(symbol):
     return re.sub(NON_ALPHA, symbol.lower(), '')
