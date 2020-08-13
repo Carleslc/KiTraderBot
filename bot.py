@@ -52,8 +52,8 @@ def start(update, context):
     text = f"Hi, {user.first_name}! I'm {NAME}, your trading assistant!\n\nAvailable commands:"
     text += "\n/start - Shows this message"
     text += "\n/ping - Test connection with trading API"
-    text += "\n/price symbol - Current price for provided symbol"
     text += "\n/list - Show the available symbols"
+    text += "\n/price symbol - Current price for provided symbol"
     text += f"\n/account [{NAME}, {user.username}] - View your account or the bot account"
     if is_allowed(update):
         text += "\n/newAccount [balance] [currency] - Creates an account for trading"

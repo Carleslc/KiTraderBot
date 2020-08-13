@@ -8,6 +8,7 @@ Trading bot simulator for Telegram. Supports Bitstamp & Binance APIs.
 ```
 /start - Shows this message
 /ping - Test connection with trading API
+/list - Show the available symbols
 /price symbol - Current price for provided symbol
 /account [KiTrader, Carleslc] - View your account or the bot account
 /newAccount [balance] [currency] - Creates an account for trading
