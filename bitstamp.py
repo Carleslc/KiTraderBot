@@ -44,7 +44,7 @@ def list_symbols():
     return __get("/trading-pairs-info", lambda data: '\n'.join(map(lambda pair: f"{pair.get('url_symbol')} - {pair.get('name')}", data)))
 
 def __symbol(symbol):
-    return re.sub(NON_ALPHA, symbol.lower(), '')
+    return re.sub(NON_ALPHA, '', symbol.lower())
 
 def __price(symbol, callback):
     return __get("/ticker/" + symbol, lambda data: callback(data.get('last')))
