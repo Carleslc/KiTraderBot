@@ -89,4 +89,7 @@ docker-compose up -d
 
 # Update (after build)
 docker-compose restart kitraderbot
+
+# Update (single line rebuild)
+docker-compose up --build --force-recreate --no-deps -d kitraderbot
 ```

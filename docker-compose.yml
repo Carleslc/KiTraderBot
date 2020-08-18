@@ -2,6 +2,7 @@ version: '3'
 
 services:
   kitraderbot:
+    build: .
     image: kitraderbot:latest
     container_name: kitraderbot
     restart: unless-stopped
