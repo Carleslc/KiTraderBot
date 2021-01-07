@@ -1,7 +1,7 @@
 tokens/
-users
 __pycache__
 .DS_Store
+superusers
 accounts
 lastAlert
 subscriptions

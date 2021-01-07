@@ -20,50 +20,56 @@ except FileNotFoundError:
     exit(1)
 
 try:
-    with open("users", 'r') as users:
-        ALLOWED_USERS = set(users.read().split('\n'))
+    with open("superusers", 'r') as users:
+        SUPERUSERS = set(users.read().split('\n'))
 except FileNotFoundError:
-    ALLOWED_USERS = set()
-
-NOT_ALLOWED = "You're not allowed to use this command."
+    SUPERUSERS = set()
 
 def debug(update, answer):
     print(f"{datetime.now()} - {update.message.from_user.username} ({update.message.chat_id}): {update.message.text}\n{answer}\n")
-
-def is_allowed(update):
-    return update.message.from_user.username in ALLOWED_USERS
 
 def reply(update, text):
     debug(update, text)
     update.message.reply_text(text)
 
+def is_superuser(update):
+    return update.message.from_user.username in SUPERUSERS
+
 def restricted(handler):
     def response(update, context, **kwargs):
-        if is_allowed(update):
+        if is_superuser(update):
             handler(update, context, **kwargs)
         else:
-            reply(update, NOT_ALLOWED)
+            reply(update, "You're not allowed to use this command.")
     return response
 
 # BASIC AND DEFAULT HANDLERS
 
 def start(update, context):
     user = update.message.from_user
+    superuser = is_superuser(update)
     text = f"Hi, {user.first_name}! I'm {NAME}, your trading assistant!\n\nAvailable commands:"
+    # Basic commands
     text += "\n/start - Shows this message"
     text += "\n/ping - Test connection with trading API"
     text += "\n/list - Show the available symbols"
     text += "\n/price symbol - Current price for provided symbol"
-    text += f"\n/account [{NAME}, {user.username}] - View your account or the bot account"
-    if is_allowed(update):
-        text += "\n/newAccount [balance] [currency] - Creates an account for trading"
-        text += "\n/deleteAccount - Deletes your trading account"
+    # Account commands
+    text += "\n/newAccount [balance] [currency] - Creates an account for mock trading"
+    text += "\n/deleteAccount - Deletes your trading account"
+    if superuser:
+        text += f"\n/account [{NAME}, {user.username}] - View your account or the bot account"
         text += f"\n/history [{NAME}, {user.username}] - View your trades or the bot trades"
-        text += "\n/trade [BUY, SELL] amount symbol [comment] - Order a trade for your account"
-        text += "\n/tradeAll [BUY, SELL] symbol [comment] - Order a trade for your account with maximum available amount"
+    else:
+        text += f"\n/account - View your account"
+        text += f"\n/history - View your trades"
+    text += "\n/trade [BUY, SELL] amount symbol [comment] - Order a trade for your account"
+    text += "\n/tradeAll [BUY, SELL] symbol [comment] - Order a trade for your account with maximum available amount"
+    # Auto-trading commands
+    if superuser:
         text += f"\n/subscribe - Receive updates from the {NAME} auto-trading account"
-        text += f"\n/update - Forces an update of the {NAME} auto-trading subscription"
         text += f"\n/unsubscribe - Stop receiving updates from the {NAME} auto-trading account"
+        text += f"\n/update - Forces an update of the {NAME} auto-trading subscription"
     reply(update, text)
 
 def unknown(update, context):
@@ -85,7 +91,7 @@ def send(f, args=False):
 
 def account(f):
     def response(update, context):
-        reply(update, f(NAME, update.message.from_user.username, ' '.join(context.args)))
+        reply(update, f(NAME, update.message.from_user.username, is_superuser(update), ' '.join(context.args)))
     return response
 
 # SUBSCRIPTIONS
@@ -93,15 +99,13 @@ def account(f):
 SUBSCRIPTIONS = dict() # users to job
 
 UPDATE_ALERTS_SECONDS = 900
-MAX_HOURS_ALERT = 2
 
-lastUpdate = datetime.now() - timedelta(hours=MAX_HOURS_ALERT)
-newAlert = False
-lastAlert = None
+lastUpdate = alerts.get_last_alert_date() or datetime.now() - timedelta(hours=24)
+newAlerts = []
 updating = False
 
-def update_alerts(force):
-    global lastAlert, newAlert, lastUpdate, updating
+def update_alerts(force=False):
+    global lastUpdate, newAlerts, updating
     if updating or not alerts.ENABLED:
         return
     updating = True
@@ -109,19 +113,20 @@ def update_alerts(force):
     if force or lastUpdate < now - timedelta(seconds=UPDATE_ALERTS_SECONDS // 2):
         lastUpdate = now
         alerts.login()
-        lastAlert = alerts.last_alert(MAX_HOURS_ALERT)
+        newAlerts = alerts.update_alerts()
         alerts.logout()
-        newAlert = lastAlert is not None
+    else:
+        newAlerts = []
     updating = False
 
 def subscription_update(bot, chat_id, force=False):
     update_alerts(force)
-    if newAlert:
+    for _, newAlertText in newAlerts:
         if not trading.existsAccount(NAME):
             trading.newAccount(NAME)
-        result = trading.tradeAll(NAME, lastAlert)
+        result = trading.tradeAll(NAME, newAlertText)
         if 'BUY' not in result and 'SELL' not in result:
-            result = lastAlert + '\n' + result
+            result = newAlertText + '\n' + result
         text = f"🚨 New Alert!\n\n{result}\n\nPerform /account {NAME} for more information."
         print(text)
         bot.send_message(chat_id=chat_id, text=text)
@@ -134,10 +139,9 @@ def force_update(update, context):
         reply(update, "Alerts are disabled.")
         return
     reply(update, "Updating. Please, wait a few seconds.")
-    if not updating:
-        subscription_update(context.bot, update.message.chat_id, force=True)
-        if not newAlert:
-            reply(update, "Alerts are up to date.")
+    subscription_update(context.bot, update.message.chat_id, force=True)
+    if not newAlerts:
+        reply(update, "Alerts are up to date.")
 
 def loadSubscriptions():
     global updater
@@ -201,11 +205,11 @@ dispatcher.add_handler(CommandHandler('ping', wrap(trading.ping)))
 dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True)))
 dispatcher.add_handler(CommandHandler('list', wrap(trading.list_symbols)))
 dispatcher.add_handler(CommandHandler('account', account(trading.account)))
-dispatcher.add_handler(CommandHandler('history', restricted(account(trading.history))))
-dispatcher.add_handler(CommandHandler('trade', restricted(send(trading.trade, args=True))))
-dispatcher.add_handler(CommandHandler('tradeAll', restricted(send(trading.tradeAll, args=True))))
-dispatcher.add_handler(CommandHandler('newAccount', restricted(send(trading.newAccount, args=True))))
-dispatcher.add_handler(CommandHandler('deleteAccount', restricted(send(trading.deleteAccount))))
+dispatcher.add_handler(CommandHandler('history', account(trading.history)))
+dispatcher.add_handler(CommandHandler('trade', send(trading.trade, args=True)))
+dispatcher.add_handler(CommandHandler('tradeAll', send(trading.tradeAll, args=True)))
+dispatcher.add_handler(CommandHandler('newAccount', send(trading.newAccount, args=True)))
+dispatcher.add_handler(CommandHandler('deleteAccount', send(trading.deleteAccount)))
 dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_job_queue=True))
 dispatcher.add_handler(CommandHandler('unsubscribe', restricted(unsubscribe)))
 dispatcher.add_handler(CommandHandler('update', restricted(force_update)))

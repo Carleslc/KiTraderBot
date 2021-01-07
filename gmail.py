@@ -12,6 +12,7 @@ def decrypt(ciphertext):
     return plaintext.rstrip(b"\0").decode('utf8')
 
 ENABLED = True
+DEBUG = False
 
 try:
     with open("tokens/gmail", 'rb') as gmail_token:
@@ -30,64 +31,71 @@ INBOX = "Trading"
 PREFIX = "Alerta: "
 
 DATE_FORMAT = "%d-%b-%Y"
-DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
+DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 
 def login():
     global mail
     if ENABLED:
-        print(datetime.now(TIMEZONE))
-        print(f"Logging to mail ({INBOX})...")
+        if DEBUG:
+            print(f"Logging to mail ({INBOX})...")
         mail = IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
         mail.login(GMAIL_MAIL, GMAIL_TOKEN)
         mail.select(INBOX)
 
-def __read_alert(id):
-    _, data = mail.uid('fetch', id, 'BODY.PEEK[HEADER.FIELDS (SUBJECT DATE)]')
+def __read_alert(mail_id):
+    _, data = mail.uid('fetch', mail_id, 'BODY.PEEK[HEADER.FIELDS (SUBJECT DATE)]')
     msg = email.message_from_string(data[0][1].decode('utf-8'))
     subject = msg['subject'].replace(PREFIX, '', 1).replace('\r\n', '')
-    date = datetime.strptime(msg['date'], DATE_TIME_FORMAT)
+    date = datetime.strptime(msg['date'], DATE_TIME_FORMAT.replace('%Z', '%z'))
     return subject, date
 
-def last_alert(maxHours=8):
-    if not ENABLED:
-        return None
-    
-    minTime = datetime.now(TIMEZONE) - timedelta(hours=maxHours)
-
+def get_last_alert_date():
     if os.path.isfile('lastAlert'):
         with open('lastAlert', 'r') as lastAlertFile:
             lastAlert = lastAlertFile.read()
             lastAlertDate = datetime.strptime(lastAlert.split(' -> ', 1)[0], DATE_TIME_FORMAT).astimezone(TIMEZONE)
-    else:
-        lastAlertDate = minTime
+            return lastAlertDate
+    return None
 
-    lastAlertDate = max(lastAlertDate, minTime)
-    print(f"Fetching new alerts since {lastAlertDate}")
+def update_alerts(maxHours=24):
+    if not ENABLED:
+        return None
+
+    print(f"{datetime.now(TIMEZONE).strftime(DATE_TIME_FORMAT)} - Update last alert")
+
+    lastAlertDate = get_last_alert_date()
+
+    if not lastAlertDate:
+        lastAlertDate = datetime.now(TIMEZONE) - timedelta(hours=maxHours)
 
     since = lastAlertDate.strftime(DATE_FORMAT)
     _, data = mail.search(None, r'(SENTSINCE {date}) (FROM "noreply@tradingview.com") (X-GM-RAW "subject:\"{prefix}\"")'.format(date=since, prefix=PREFIX))
     mail_ids = data[0].split()
 
-    alerts = len(mail_ids)
+    alerts = []
 
-    if alerts > 0:
-        subject, newLastAlertDate = __read_alert(mail_ids[-1])
-        if newLastAlertDate != lastAlertDate and newLastAlertDate > lastAlertDate:
+    for mail_id in mail_ids:
+        subject, alertDate = __read_alert(mail_id)
+        if alertDate > lastAlertDate:
             alertParts = subject.split()
             alertText = f"{alertParts[0].upper()} {' '.join(alertParts[1:])}"
-            alert = f'{newLastAlertDate.astimezone(TIMEZONE).strftime(DATE_TIME_FORMAT)} -> {alertText}'
-            with open('lastAlert', 'w') as lastAlertFile:
-                lastAlertFile.write(alert)
-            return alertText
-
-    print('Alerts are up to date')
-    return None
+            alerts.append((alertDate, alertText))
+            newAlert = f'{alertDate.astimezone(TIMEZONE).strftime(DATE_TIME_FORMAT)} -> {alertText}'
+            print(newAlert)
+    
+    if alerts:
+        with open('lastAlert', 'w') as lastAlertFile:
+            lastAlertFile.write(newAlert)
+    
+    return alerts
 
 def logout():
     if mail is not None:
         mail.close()
+        mail.logout()
 
 if __name__ == '__main__':
+    DEBUG = True
     login()
-    last_alert()
+    update_alerts()
     logout()

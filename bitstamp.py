@@ -62,18 +62,18 @@ def price(user, symbol):
 def __exists(symbol):
     return get(BASE_URL + "/ticker/" + __symbol(symbol)).status_code == 200
 
-def __authorized(bot_name, from_user, target):
-    return target == from_user or target == bot_name
+def __authorized(bot_name, from_user, superuser, target):
+    return target == from_user or (superuser and target == bot_name)
 
-def account(bot_name, user, other):
+def account(bot_name, user, superuser, other):
     target = other if other != '' else user
-    if not __authorized(bot_name, user, target):
+    if not __authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} account."
     return str(ACCOUNTS[target]) if target in ACCOUNTS else f"{target} do not have any account."
 
-def history(bot_name, user, other):
+def history(bot_name, user, superuser, other):
     target = other if other != '' else user
-    if not __authorized(bot_name, user, target):
+    if not __authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} trades."
     return ACCOUNTS[target].history() if target in ACCOUNTS else f"{target} do not have any account."
 
