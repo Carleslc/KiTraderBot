@@ -186,7 +186,7 @@ updater = Updater(TELEGRAM_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
 # ERROR HANDLING
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARN)
 
 def error_callback(update, context):
     try:

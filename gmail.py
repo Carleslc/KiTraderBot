@@ -31,7 +31,7 @@ INBOX = "Trading"
 PREFIX = "Alerta: "
 
 DATE_FORMAT = "%d-%b-%Y"
-DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+DATE_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 
 def login():
     global mail
@@ -46,7 +46,7 @@ def __read_alert(mail_id):
     _, data = mail.uid('fetch', mail_id, 'BODY.PEEK[HEADER.FIELDS (SUBJECT DATE)]')
     msg = email.message_from_string(data[0][1].decode('utf-8'))
     subject = msg['subject'].replace(PREFIX, '', 1).replace('\r\n', '')
-    date = datetime.strptime(msg['date'], DATE_TIME_FORMAT.replace('%Z', '%z'))
+    date = datetime.strptime(msg['date'], DATE_TIME_FORMAT)
     return subject, date
 
 def get_last_alert_date():
@@ -57,7 +57,7 @@ def get_last_alert_date():
             return lastAlertDate
     return None
 
-def update_alerts(maxHours=24):
+def update_alerts(maxHours=72):
     if not ENABLED:
         return None
 
