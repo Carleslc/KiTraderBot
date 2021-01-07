@@ -57,7 +57,7 @@ def get_last_alert_date():
             return lastAlertDate
     return None
 
-def update_alerts(maxHours=72):
+def update_alerts(maxHours=24):
     if not ENABLED:
         return None
 
