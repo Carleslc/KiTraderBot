@@ -22,6 +22,7 @@ class Account:
         self.balance = balance
         self.currency = currency.upper()
         self.initial_balance = balance
+        # TODO: min_trade is API dependent, change min_trade to api parameter
         self.min_trade = max(0, min_trade)
         self.historic = list()
         self.positions = dict() # SYMBOL to Position
@@ -32,6 +33,7 @@ class Account:
         ret = Account.percent(equity / self.initial_balance)
         return f"User: {self.user}\nBalance: {self.__price(self.balance)}\nEquity: {self.__price(equity)}\nReturn: {round(ret, 3)}%{positions}"
 
+    # TODO: add api parameter, instantiate Decoder with api argument
     def load(file):
         with open(file, 'r') as account_file:
             return json.load(account_file, cls=Decoder)
@@ -76,6 +78,7 @@ class Account:
             return f"Insufficient balance: {self.__price(self.balance)}."
         symbol = self.__symbol(symbol)
         open = amount * current
+        # TODO: Use self.api.min_trade instead
         if open < self.min_trade:
             return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(open)} ({round(amount, DECIMALS)} {symbol} * {self.__price(current)})."
         maximum = self.balance / current
@@ -97,6 +100,7 @@ class Account:
     def sell(self, symbol, current, amount, fee, comment=''):
         symbol = self.__symbol(symbol)
         close = amount * current
+        # TODO: Use self.api.min_trade instead
         if close < self.min_trade:
             return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(close)} ({round(amount, DECIMALS)} {symbol} * {self.__price(current)})."
         total_amount = self.get(symbol)
@@ -127,6 +131,7 @@ def dumper(obj):
 class Decoder(json.JSONDecoder):
     def decode(self, s):
         d = super(Decoder, self).decode(s)
+        # TODO: Pass api argument instead min_trade
         account = Account(d['user'], d['balance'], d['currency'], d['min_trade'])
         account.initial_balance = d['initial_balance']
         account.historic = d['historic']

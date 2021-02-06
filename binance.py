@@ -46,7 +46,7 @@ def subscription_update(user):
 def subscribe(user, symbol):
     symbol = symbol.upper()
     if len(SUBSCRIBERS) >= SUBSCRIPTION_UPDATE_SECONDS * REQUESTS_LIMIT_PER_SECOND:
-        return -1, f"Sorry, cannot subscribe. Maximum subscriptors reached: {len(SUBSCRIBERS)}"
+        return -1, f"Sorry, cannot subscribe. Maximum subscriptors reached."
     if not __exists(symbol):
         return -1, "Invalid symbol."
     SUBSCRIBERS[user] = symbol

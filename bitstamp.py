@@ -59,21 +59,21 @@ def price(user, symbol):
     symbol = __symbol(symbol)
     return __price(symbol, lambda current: f"{symbol.upper()}: {current}")
 
-def __exists(symbol):
+def exists(symbol):
     return get(BASE_URL + "/ticker/" + __symbol(symbol)).status_code == 200
 
-def __authorized(bot_name, from_user, superuser, target):
+def is_authorized(bot_name, from_user, superuser, target):
     return target == from_user or (superuser and target == bot_name)
 
 def account(bot_name, user, superuser, other):
     target = other if other != '' else user
-    if not __authorized(bot_name, user, superuser, target):
+    if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} account."
     return str(ACCOUNTS[target]) if target in ACCOUNTS else f"{target} do not have any account."
 
 def history(bot_name, user, superuser, other):
     target = other if other != '' else user
-    if not __authorized(bot_name, user, superuser, target):
+    if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} trades."
     return ACCOUNTS[target].history() if target in ACCOUNTS else f"{target} do not have any account."
 
@@ -92,7 +92,7 @@ def newAccount(user, args=''):
     success, balance = __float(balance)
     if not success:
         return "Balance must be in decimal format. For example: 500.25"
-    currency = 'EUR' if len(args) < 2 else args[1]
+    currency = 'USD' if len(args) < 2 else args[1]
     account = Account(user, balance, currency, MIN_TRADE)
     ACCOUNTS[user] = account
     return f"Your account was created successfully.\n\n{account}"
@@ -111,12 +111,12 @@ def trade(user, order):
     action = args[0].upper()
     if len(args) < 3 or action not in ORDERS:
         return "Invalid order syntax."
-    (success, amount) = __float(args[1])
+    success, amount = __float(args[1])
     if not success:
         return "Amount must be in decimal format. For example: 500.25"
     symbol = args[2] + account.currency if account.currency not in args[2] else args[2]
     comment = ' '.join(args[3:]) if len(args) > 3 else ''
-    if not __exists(symbol):
+    if not exists(symbol):
         return f"Invalid symbol: {symbol.upper()}"
     current = get_price(symbol)
     if action == 'BUY':
@@ -134,7 +134,7 @@ def tradeAll(user, order):
         return "Invalid order syntax."
     symbol = args[1] + account.currency if account.currency not in args[1] else args[1]
     comment = ' '.join(args[2:]) if len(args) > 2 else ''
-    if not __exists(symbol):
+    if not exists(symbol):
         return f"Invalid symbol: {symbol.upper()}"
     current = get_price(symbol)
     if action == 'BUY':

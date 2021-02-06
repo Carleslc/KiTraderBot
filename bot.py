@@ -214,6 +214,8 @@ dispatcher.add_handler(CommandHandler('subscribe', restricted(subscribe), pass_j
 dispatcher.add_handler(CommandHandler('unsubscribe', restricted(unsubscribe)))
 dispatcher.add_handler(CommandHandler('update', restricted(force_update)))
 
+# TODO: Command /selectApi [Bitstamp | Binance]
+
 # DEFAULT HANDLERS
 dispatcher.add_handler(CommandHandler('start', start))
 dispatcher.add_handler(MessageHandler(Filters.command, unknown))
