@@ -98,7 +98,7 @@ class API(ABC):
     balance = args[0] if args[0] else '1000'
     success, balance = __float(balance)
     if not success:
-        return "Balance must be in decimal format. For example: 500.25"
+        return "Balance must be in decimal format. For example: 500.25 USD"
     currency = 'USD' if len(args) < 2 else args[1]
     return self.__newAccount(user, balance, currency)
 

@@ -91,7 +91,7 @@ def newAccount(user, args=''):
     balance = args[0] if args[0] else '1000'
     success, balance = __float(balance)
     if not success:
-        return "Balance must be in decimal format. For example: 500.25"
+        return "Balance must be in decimal format. For example: 500.25 USD"
     currency = 'USD' if len(args) < 2 else args[1]
     account = Account(user, balance, currency, MIN_TRADE)
     ACCOUNTS[user] = account
@@ -99,8 +99,11 @@ def newAccount(user, args=''):
 
 def deleteAccount(user):
     if user not in ACCOUNTS:
-        return "You do not have any account to delete."
+        return "You do not have an account to delete."
     ACCOUNTS.pop(user)
+    file = f"accounts/{user}"
+    if os.path.exists(file):
+        os.remove(file)
     return "Your account has been deleted."
 
 def trade(user, order):
@@ -110,10 +113,10 @@ def trade(user, order):
     args = order.split(' ', 3)
     action = args[0].upper()
     if len(args) < 3 or action not in ORDERS:
-        return "Invalid order syntax."
+        return "Invalid order syntax: /trade [BUY, SELL] amount symbol [comment]"
     success, amount = __float(args[1])
     if not success:
-        return "Amount must be in decimal format. For example: 500.25"
+        return "Amount must be in decimal format. For example: 1.5 ETH"
     symbol = args[2] + account.currency if account.currency not in args[2] else args[2]
     comment = ' '.join(args[3:]) if len(args) > 3 else ''
     if not exists(symbol):
@@ -131,7 +134,7 @@ def tradeAll(user, order):
     args = order.split(' ', 2)
     action = args[0].upper()
     if len(args) < 2 or action not in ORDERS:
-        return "Invalid order syntax."
+        return "Invalid order syntax: /tradeAll [BUY, SELL] symbol [comment]"
     symbol = args[1] + account.currency if account.currency not in args[1] else args[1]
     comment = ' '.join(args[2:]) if len(args) > 2 else ''
     if not exists(symbol):

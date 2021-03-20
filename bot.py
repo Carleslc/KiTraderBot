@@ -56,7 +56,7 @@ def start(update, context):
     text += "\n/list - Show the available symbols"
     text += "\n/price symbol - Current price for provided symbol"
     # Account commands
-    text += "\n/newAccount [balance] [currency] - Creates an account for mock trading"
+    text += "\n/newAccount [balance] [currency] - Creates an account for mock trading (free)"
     text += "\n\te.g. /newAccount 1000 USD"
     text += "\n/deleteAccount - Deletes your trading account"
     if superuser:
@@ -69,6 +69,7 @@ def start(update, context):
     text += "\n\te.g. /trade BUY 0.1 ETH"
     text += "\n/tradeAll [BUY, SELL] symbol [comment] - Order a trade for your account with maximum available amount"
     text += "\n\te.g. /tradeAll BUY BTC"
+    text += f"\nTrading Fee: {trading.FEE * 100}%"
     # Auto-trading commands
     if superuser:
         text += f"\n/subscribe - Receive updates from the {NAME} auto-trading account"
