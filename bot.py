@@ -103,6 +103,7 @@ UPDATE_ALERTS_SECONDS = 900
 
 def with_tz(date):
     date.replace(tzinfo=pytz.UTC)
+    return date
 
 lastUpdate = with_tz(alerts.get_last_alert_date() or datetime.now() - timedelta(hours=24))
 newAlerts = []
