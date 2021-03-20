@@ -1,6 +1,7 @@
 #!/usr/bin/python3.6
 # -*- coding: utf-8 -*-
 
+import pytz
 import logging
 import json
 import gmail as alerts
@@ -100,7 +101,10 @@ SUBSCRIPTIONS = dict() # users to job
 
 UPDATE_ALERTS_SECONDS = 900
 
-lastUpdate = alerts.get_last_alert_date() or datetime.now() - timedelta(hours=24)
+def with_tz(date):
+    date.replace(tzinfo=pytz.UTC)
+
+lastUpdate = with_tz(alerts.get_last_alert_date() or datetime.now() - timedelta(hours=24))
 newAlerts = []
 updating = False
 
@@ -109,7 +113,7 @@ def update_alerts(force=False):
     if updating or not alerts.ENABLED:
         return
     updating = True
-    now = datetime.now()
+    now = with_tz(datetime.now())
     if force or lastUpdate < now - timedelta(seconds=UPDATE_ALERTS_SECONDS // 2):
         lastUpdate = now
         alerts.login()
