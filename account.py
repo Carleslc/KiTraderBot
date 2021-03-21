@@ -59,13 +59,13 @@ class Account:
     def now():
         return datetime.now(pytz.UTC).strftime("%d-%m-%Y %H:%M:%S %Z")
 
-    def __price(self, p):
-        return f"{round(p, 2)} {self.currency}"
+    def __price(self, p, precision=2):
+        return f"{round(p, precision)} {self.currency}"
 
     def __record(self, action, symbol, amount, price, cost, fee, comment):
         record = Account.now()
         icon = '📈' if action == 'BUY' else '📉'
-        record += f"\n{icon} {action} {round(amount, DECIMALS)} {symbol} at {self.__price(price)} for {self.__price(cost)} with {self.__price(fee)} fees."
+        record += f"\n{icon} {action} {round(amount, DECIMALS)} {symbol} at {self.__price(price, DECIMALS)} for {self.__price(cost)} with {self.__price(fee)} fees."
         record += f"\nEquity: {self.__price(self.equity())}"
         record += f"\nComment: {comment}" if comment else ''
         self.historic.append(record)
@@ -82,13 +82,13 @@ class Account:
         open = amount * current
         # TODO: Use self.api.min_trade instead
         if open < self.min_trade:
-            return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(open)} ({round(amount, DECIMALS)} {symbol} at price {self.__price(current)})."
+            return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(open)} ({round(amount, DECIMALS)} {symbol} at price {self.__price(current, DECIMALS)})."
         open_fee = fee * (base or open)
         open_with_fees = open + open_fee
         if self.balance < open_with_fees:
             max_fees = fee * self.balance
             max_amount_with_fees = (self.balance - max_fees) / current
-            return f"Insufficient balance: {self.__price(self.balance)}. Maximum: {round(max_amount_with_fees, DECIMALS)} {symbol} at price {self.__price(current)} with {self.__price(max_fees)} fees ({fee * 100}%).\n\nUse /tradeAll BUY {symbol} {comment}"
+            return f"Insufficient balance: {self.__price(self.balance)}. Maximum: {round(max_amount_with_fees, DECIMALS)} {symbol} at price {self.__price(current, DECIMALS)} with {self.__price(max_fees)} fees ({fee * 100}%).\n\nUse /tradeAll BUY {symbol} {comment}"
         self.balance -= open_with_fees
         position = Position(symbol, amount)
         self.positions[symbol] = position
