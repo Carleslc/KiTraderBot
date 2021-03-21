@@ -69,6 +69,7 @@ class Account:
         record += f"\nEquity: {self.__price(self.equity())}"
         record += f"\nComment: {comment}" if comment else ''
         self.historic.append(record)
+        record += f"\n\nPerform /account {self.user} for more information."
         return record
 
     def equity(self):

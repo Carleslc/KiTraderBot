@@ -132,7 +132,7 @@ def subscription_update(bot, chat_id, force=False):
         result = trading.tradeAll(NAME, newAlertText)
         if 'BUY' not in result and 'SELL' not in result:
             result = newAlertText + '\n' + result
-        text = f"🚨 New Alert!\n\n{result}\n\nPerform /account {NAME} for more information."
+        text = f"🚨 New Alert!\n\n{result}"
         print(text)
         bot.send_message(chat_id=chat_id, text=text)
 

@@ -41,7 +41,7 @@ def ping():
     return __get("/ticker/btcusd", lambda _: "Bitstamp API seems to be working.")
 
 def __list_pairs(pairs):
-    return '\n'.join(map(lambda pair: pair.get('name'), pairs)) or '-'
+    return '\n'.join(map(lambda pair: pair.get('name'), pairs))
 
 def list_symbols(user):
     def pairs_info(pairs):
@@ -49,11 +49,11 @@ def list_symbols(user):
             currency = ACCOUNTS[user].currency
             my_pairs = list(filter(lambda pair: currency in pair.get('name').split('/'), pairs))
             others = filter(lambda pair: pair not in my_pairs, pairs)
-            list_pairs_info = f"Available symbols for your account (Currency {currency}):\n"
+            list_pairs_info = f"Available symbols for your account (Currency {currency}):\n\n"
             list_pairs_info += __list_pairs(my_pairs)
-            list_pairs_info += "\nAvailable symbols in other currencies:\n"
+            list_pairs_info += "\n\nAvailable symbols in other currencies:\n\n"
             list_pairs_info += __list_pairs(others)
-            return list_pairs_info
+            return list_pairs_info.rstrip()
         return __list_pairs(pairs)
     return __get("/trading-pairs-info", pairs_info)
 
@@ -83,15 +83,21 @@ def account(bot_name, user, superuser, other):
     target = other if other != '' else user
     if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} account."
-    name_as = "You" if target == user else target
-    return str(ACCOUNTS[target]) if existsAccount(target) else f"{name_as} do not have an account."
+    if existsAccount(target):
+        return str(ACCOUNTS[target])
+    elif target == user:
+        return "You do not have an account. /newAccount"
+    return f"{target} do not have an account."
 
 def history(bot_name, user, superuser, other):
     target = other if other != '' else user
     if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} trades."
-    name_as = "You" if target == user else target
-    return ACCOUNTS[target].history() if existsAccount(target) else f"{name_as} do not have an account."
+    if existsAccount(target):
+        return ACCOUNTS[target].history()
+    elif target == user:
+        return "You do not have an account. /newAccount"
+    return f"{target} do not have an account."
 
 def __float(s):
     try:
@@ -111,7 +117,7 @@ def newAccount(user, args=''):
     currency = 'USD' if len(args) < 2 else args[1]
     account = Account(user, balance, currency, MIN_TRADE)
     ACCOUNTS[user] = account
-    return f"Your account was created successfully.\n\n{account}"
+    return f"Your account has been created successfully.\n\n{account}"
 
 def deleteAccount(user):
     if not existsAccount(user):
@@ -124,7 +130,7 @@ def deleteAccount(user):
 
 def trade(user, order):
     if not existsAccount(user):
-        return "You do not have an account."
+        return "You do not have an account. /newAccount"
     account = ACCOUNTS[user]
     args = order.split(' ', 3)
     action = args[0].upper()
@@ -146,7 +152,7 @@ def trade(user, order):
 
 def tradeAll(user, order):
     if not existsAccount(user):
-        return "You do not have an account."
+        return "You do not have an account. /newAccount"
     account = ACCOUNTS[user]
     args = order.split(' ', 2)
     action = args[0].upper()
