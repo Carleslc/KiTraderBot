@@ -32,10 +32,11 @@ ACCOUNTS = dict() # user to Account
 def __get(url, callback, filter_status=True):
     response = get(BASE_URL + url)
     code = response.status_code
+    content = json(response.content) if response.content is not None else None
     if not filter_status:
-      return callback(json(response.content), code)
+      return callback(content, code)
     if code >= 200 and code < 300:
-      return callback(json(response.content))
+      return callback(content)
     return f"Bitstamp API: {code}"
 
 def ping():
