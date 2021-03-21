@@ -76,46 +76,43 @@ class Account:
         return self.balance + sum(list(map(lambda p: p.amount * trading.get_price(p.symbol + self.currency), self.positions.values())))
 
     def buy(self, symbol, current, amount, fee, comment=''):
-        if self.balance <= 0:
-            return f"Insufficient balance: {self.__price(self.balance)}."
         symbol = self.__symbol(symbol)
         open = amount * current
         # TODO: Use self.api.min_trade instead
         if open < self.min_trade:
-            return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(open)} ({round(amount, DECIMALS)} {symbol} * {self.__price(current)})."
-        maximum = self.balance / current
-        if amount > maximum:
-            return f"Invalid amount, your balance is {self.__price(self.balance)}. Maximum: {round(maximum, DECIMALS)} {symbol} at price {self.__price(current)}."
+            return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(open)} ({round(amount, DECIMALS)} {symbol} at price {self.__price(current)})."
         open_fee = fee * open
-        open = open - open_fee
-        amount = open / current
-        self.balance = self.balance - open - open_fee
+        open_with_fees = open + open_fee
+        if self.balance < open_with_fees:
+            max_fees = fee * self.balance
+            max_amount_with_fees = (self.balance - max_fees) / current
+            return f"Insufficient balance: {self.__price(self.balance)}. Maximum: {round(max_amount_with_fees, DECIMALS)} {symbol} at price {self.__price(current)} with {self.__price(max_fees)} fees ({fee * 100}%).\n\nUse /tradeAll BUY {symbol} {comment}"
+        self.balance -= open_with_fees
         position = Position(symbol, amount)
         self.positions[symbol] = position
         return self.__record('BUY', symbol, amount, current, open, open_fee, comment)
 
     def buy_all(self, symbol, current, fee, comment=''):
-        if self.balance <= 0:
-            return f"Insufficient balance: {self.__price(self.balance)}."
-        return self.buy(symbol, current, self.balance / current, fee, comment)
+        max_amount_with_fees = (self.balance - fee * self.balance) / current
+        return self.buy(symbol, current, max_amount_with_fees, fee, comment)
 
     def sell(self, symbol, current, amount, fee, comment=''):
         symbol = self.__symbol(symbol)
         close = amount * current
         # TODO: Use self.api.min_trade instead
         if close < self.min_trade:
-            return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(close)} ({round(amount, DECIMALS)} {symbol} * {self.__price(current)})."
+            return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(close)} ({round(amount, DECIMALS)} {symbol} at price {self.__price(current)})."
         total_amount = self.get(symbol)
         if amount > total_amount:
-            return f"Invalid amount: {round(amount, DECIMALS)} {symbol}. Available: {round(total_amount, DECIMALS)} {symbol}."
+            return f"Invalid amount: {round(amount, DECIMALS)} {symbol}. Available: {round(total_amount, DECIMALS)} {symbol}.\n\nUse /tradeAll SELL {symbol} {comment}"
         elif amount < total_amount:
             position = self.positions[symbol]
             position.amount = position.amount - amount
         else:
             self.positions.pop(symbol)
         close_fee = fee * close
-        close = close - close_fee
-        self.balance = self.balance + close
+        close_with_fees = close - close_fee
+        self.balance += close_with_fees
         return self.__record('SELL', symbol, amount, current, close, close_fee, comment)
 
     def sell_all(self, symbol, current, fee, comment=''):
