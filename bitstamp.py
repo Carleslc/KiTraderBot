@@ -40,8 +40,22 @@ def __get(url, callback):
 def ping():
     return __get("/ticker/btcusd", lambda _: "Bitstamp API seems to be working.")
 
-def list_symbols():
-    return __get("/trading-pairs-info", lambda data: '\n'.join(map(lambda pair: f"{pair.get('url_symbol')} - {pair.get('name')}", data)))
+def __list_pairs(pairs):
+    return '\n'.join(map(lambda pair: pair.get('name'), pairs)) or '-'
+
+def list_symbols(user):
+    def pairs_info(pairs):
+        if existsAccount(user):
+            currency = ACCOUNTS[user].currency
+            my_pairs = list(filter(lambda pair: currency in pair.get('name').split('/'), pairs))
+            others = filter(lambda pair: pair not in my_pairs, pairs)
+            list_pairs_info = f"Available symbols for your account (Currency {currency}):\n"
+            list_pairs_info += __list_pairs(my_pairs)
+            list_pairs_info += "\nAvailable symbols in other currencies:\n"
+            list_pairs_info += __list_pairs(others)
+            return list_pairs_info
+        return __list_pairs(pairs)
+    return __get("/trading-pairs-info", pairs_info)
 
 def __symbol(symbol):
     return re.sub(NON_ALPHA, '', symbol.lower())
@@ -54,7 +68,7 @@ def get_price(symbol):
 
 def price(user, symbol):
     if not symbol:
-        currency = ACCOUNTS[user].currency if user in ACCOUNTS else 'USD'
+        currency = ACCOUNTS[user].currency if existsAccount(user) else 'USD'
         symbol = f'BTC{currency}'
     symbol = __symbol(symbol)
     return __price(symbol, lambda current: f"{symbol.upper()}: {current}")
@@ -69,13 +83,15 @@ def account(bot_name, user, superuser, other):
     target = other if other != '' else user
     if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} account."
-    return str(ACCOUNTS[target]) if target in ACCOUNTS else f"{target} do not have any account."
+    name_as = "You" if target == user else target
+    return str(ACCOUNTS[target]) if existsAccount(target) else f"{name_as} do not have an account."
 
 def history(bot_name, user, superuser, other):
     target = other if other != '' else user
     if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} trades."
-    return ACCOUNTS[target].history() if target in ACCOUNTS else f"{target} do not have any account."
+    name_as = "You" if target == user else target
+    return ACCOUNTS[target].history() if existsAccount(target) else f"{name_as} do not have an account."
 
 def __float(s):
     try:
@@ -98,7 +114,7 @@ def newAccount(user, args=''):
     return f"Your account was created successfully.\n\n{account}"
 
 def deleteAccount(user):
-    if user not in ACCOUNTS:
+    if not existsAccount(user):
         return "You do not have an account to delete."
     ACCOUNTS.pop(user)
     file = f"accounts/{user}"
@@ -107,8 +123,8 @@ def deleteAccount(user):
     return "Your account has been deleted."
 
 def trade(user, order):
-    if user not in ACCOUNTS:
-        return "You do not have any account."
+    if not existsAccount(user):
+        return "You do not have an account."
     account = ACCOUNTS[user]
     args = order.split(' ', 3)
     action = args[0].upper()
@@ -121,6 +137,7 @@ def trade(user, order):
     comment = ' '.join(args[3:]) if len(args) > 3 else ''
     if not exists(symbol):
         return f"Invalid symbol: {symbol.upper()}"
+    symbol = __symbol(symbol)
     current = get_price(symbol)
     if action == 'BUY':
         return account.buy(symbol, current, amount, FEE, comment)
@@ -128,8 +145,8 @@ def trade(user, order):
         return account.sell(symbol, current, amount, FEE, comment)
 
 def tradeAll(user, order):
-    if user not in ACCOUNTS:
-        return "You do not have any account."
+    if not existsAccount(user):
+        return "You do not have an account."
     account = ACCOUNTS[user]
     args = order.split(' ', 2)
     action = args[0].upper()
@@ -139,6 +156,7 @@ def tradeAll(user, order):
     comment = ' '.join(args[2:]) if len(args) > 2 else ''
     if not exists(symbol):
         return f"Invalid symbol: {symbol.upper()}"
+    symbol = __symbol(symbol)
     current = get_price(symbol)
     if action == 'BUY':
         return account.buy_all(symbol, current, FEE, comment)

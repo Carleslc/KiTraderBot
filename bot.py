@@ -208,7 +208,7 @@ dispatcher.add_error_handler(error_callback)
 # TRADING HANDLERS
 dispatcher.add_handler(CommandHandler('ping', wrap(trading.ping)))
 dispatcher.add_handler(CommandHandler('price', send(trading.price, args=True)))
-dispatcher.add_handler(CommandHandler('list', wrap(trading.list_symbols)))
+dispatcher.add_handler(CommandHandler('list', send(trading.list_symbols)))
 dispatcher.add_handler(CommandHandler('account', account(trading.account)))
 dispatcher.add_handler(CommandHandler('history', account(trading.history)))
 dispatcher.add_handler(CommandHandler('trade', send(trading.trade, args=True)))
