@@ -29,19 +29,20 @@ except FileNotFoundError:
 
 ACCOUNTS = dict() # user to Account
 
-def __get(url, callback):
+def __get(url, callback, filter_status=True):
     response = get(BASE_URL + url)
     code = response.status_code
+    if not filter_status:
+      return callback(json(response.content), code)
     if code >= 200 and code < 300:
-        return callback(json(response.content))
-    else:
-        return f"Cannot connect to Bitstamp API: {code}"
+      return callback(json(response.content))
+    return f"Bitstamp API: {code}"
 
 def ping():
     return __get("/ticker/btcusd", lambda _: "Bitstamp API seems to be working.")
 
 def __list_pairs(pairs):
-    return '\n'.join(map(lambda pair: pair.get('name'), pairs))
+    return '\n'.join(map(lambda pair: pair.get('name').replace('/', ''), pairs))
 
 def list_symbols(user):
     def pairs_info(pairs):
@@ -61,20 +62,23 @@ def __symbol(symbol):
     return re.sub(NON_ALPHA, '', symbol.lower())
 
 def __price(symbol, callback):
-    return __get("/ticker/" + symbol, lambda data: callback(data.get('last')))
+    def parse(data, status_code):
+        if status_code == 200:
+            return callback(data.get('last'))
+        return f"Invalid symbol: {symbol.upper()}. See /list"
+    return __get("/ticker/" + __symbol(symbol), parse, filter_status=False)
 
 def get_price(symbol):
-    return __price(__symbol(symbol), lambda price: float(price))
+    return __price(symbol, lambda price: float(price))
 
 def price(user, symbol):
     if not symbol:
         currency = ACCOUNTS[user].currency if existsAccount(user) else 'USD'
         symbol = f'BTC{currency}'
-    symbol = __symbol(symbol)
     return __price(symbol, lambda current: f"{symbol.upper()}: {current}")
 
 def exists(symbol):
-    return get(BASE_URL + "/ticker/" + __symbol(symbol)).status_code == 200
+    return __get("/ticker/" + __symbol(symbol), lambda _, status_code: status_code == 200, filter_status=False)
 
 def is_authorized(bot_name, from_user, superuser, target):
     return target == from_user or (superuser and target == bot_name)
@@ -142,7 +146,7 @@ def trade(user, order):
     symbol = args[2] + account.currency if account.currency not in args[2] else args[2]
     comment = ' '.join(args[3:]) if len(args) > 3 else ''
     if not exists(symbol):
-        return f"Invalid symbol: {symbol.upper()}"
+        return f"Invalid symbol: {symbol.upper()}. See /list"
     symbol = __symbol(symbol)
     current = get_price(symbol)
     if action == 'BUY':
@@ -161,7 +165,7 @@ def tradeAll(user, order):
     symbol = args[1] + account.currency if account.currency not in args[1] else args[1]
     comment = ' '.join(args[2:]) if len(args) > 2 else ''
     if not exists(symbol):
-        return f"Invalid symbol: {symbol.upper()}"
+        return f"Invalid symbol: {symbol.upper()}. See /list"
     symbol = __symbol(symbol)
     current = get_price(symbol)
     if action == 'BUY':

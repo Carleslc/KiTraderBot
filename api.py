@@ -34,13 +34,14 @@ class API(ABC):
     """
     self.name = name
   
-  def __get(self, url, callback):
+  def __get(self, url, callback, filter_status=True):
     response = get(self.base_url + url)
     code = response.status_code
+    if not filter_status:
+      return callback(json(response.content), code)
     if code >= 200 and code < 300:
-        return callback(json(response.content))
-    else:
-        return f"Cannot connect to {self.name} API: {code}"
+      return callback(json(response.content))
+    return f"{self.name} API: {code}"
 
   @abstractmethod
   def ping(self) -> str:
