@@ -75,13 +75,15 @@ class Account:
     def equity(self):
         return self.balance + sum(list(map(lambda p: p.amount * trading.get_price(p.symbol + self.currency), self.positions.values())))
 
-    def buy(self, symbol, current, amount, fee, comment=''):
+    def buy(self, symbol, current, amount, fee, comment='', base=0):
+        if self.balance <= 0:
+            return f"Insufficient balance: {self.__price(self.balance)}."
         symbol = self.__symbol(symbol)
         open = amount * current
         # TODO: Use self.api.min_trade instead
         if open < self.min_trade:
             return f"Trade price must be greater than {self.__price(self.min_trade)}. Current is {self.__price(open)} ({round(amount, DECIMALS)} {symbol} at price {self.__price(current)})."
-        open_fee = fee * open
+        open_fee = fee * (base or open)
         open_with_fees = open + open_fee
         if self.balance < open_with_fees:
             max_fees = fee * self.balance
@@ -93,8 +95,9 @@ class Account:
         return self.__record('BUY', symbol, amount, current, open, open_fee, comment)
 
     def buy_all(self, symbol, current, fee, comment=''):
-        max_amount_with_fees = (self.balance - fee * self.balance) / current
-        return self.buy(symbol, current, max_amount_with_fees, fee, comment)
+        fees = fee * self.balance
+        max_amount_with_fees = (self.balance - fees) / current
+        return self.buy(symbol, current, max_amount_with_fees, fee, comment, base=self.balance)
 
     def sell(self, symbol, current, amount, fee, comment=''):
         symbol = self.__symbol(symbol)
