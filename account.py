@@ -57,9 +57,9 @@ class Account:
         trades = len(self.historic)
         if trades == 0:
             return "No trades found."
-        historic = f"Total trades: {trades}\n"
+        historic = f"Total trades: {trades}\n\n"
         if last and trades > last:
-            historic += f"Last {last} trades:\n"
+            historic += f"Last {last} trades:\n\n"
         historic += '\n\n'.join(self.historic[-last:] if last else self.historic)
         return historic
 
