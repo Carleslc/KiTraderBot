@@ -53,8 +53,10 @@ class Account:
         symbol = self.__symbol(symbol)
         return self.positions[symbol].amount if symbol in self.positions else 0.0
 
-    def history(self):
-        return '\n\n'.join(self.historic) if len(self.historic) > 0 else "No trades found."
+    def history(self, last=None):
+        if len(self.historic) == 0:
+            return "No trades found."
+        return '\n\n'.join(self.historic[-last:] if last else self.historic)
 
     def now():
         return datetime.now(pytz.UTC).strftime("%d-%m-%Y %H:%M:%S %Z")

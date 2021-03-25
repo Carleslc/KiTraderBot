@@ -100,7 +100,7 @@ def history(bot_name, user, superuser, other):
     if not is_authorized(bot_name, user, superuser, target):
         return f"You are not allowed to view {target} trades."
     if existsAccount(target):
-        return ACCOUNTS[target].history()
+        return ACCOUNTS[target].history(last=20)
     elif target == user:
         return "You do not have an account. /newAccount"
     return f"{target} do not have an account."
