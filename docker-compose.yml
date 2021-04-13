@@ -5,6 +5,6 @@ services:
     build: .
     image: kitraderbot:latest
     container_name: kitraderbot
-    restart: unless-stopped
+    restart: always
     volumes:
       - .:/usr/src/KiTraderBot

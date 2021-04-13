@@ -115,13 +115,13 @@ def update_alerts(force=False):
         return
     updating = True
     now = datetime.now(pytz.UTC)
+    newAlerts = []
     if force or lastUpdate < now - timedelta(seconds=UPDATE_ALERTS_SECONDS // 2):
-        lastUpdate = now
-        alerts.login()
-        newAlerts = alerts.update_alerts()
-        alerts.logout()
-    else:
-        newAlerts = []
+        try:
+            newAlerts = alerts.update_alerts()
+            lastUpdate = now
+        except Exception:
+            logging.exception("Cannot update alerts")
     updating = False
 
 def subscription_update(bot, chat_id, force=False):
